@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 // From:
 // http://stackoverflow.com/questions/1082192/how-to-generate-random-variable-names-in-c-using-macros/17624752#17624752
 //
@@ -9,4 +11,8 @@
 
 namespace spud {
 void *alloc_executable_memory(size_t size);
-}
+
+// TODO(tashcan): Ideally this should be a scoped thing
+void disable_jit_write_protection();
+void enable_jit_write_protection();
+} // namespace spud

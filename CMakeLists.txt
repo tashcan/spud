@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 
 project(spud)
 
+include(CTest)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -32,6 +34,14 @@ target_sources("spud"
 	"src/zydis_utils.cc"
 	"src/zydis_utils.h"
 	"src/detour/x86_64.cc"
+	"src/detour/x86_64.h"
+	"src/detour/aarch64.cc"
+	"src/detour/aarch64.h"
+    "src/detour/detour.cc"
+    "src/detour/detour_impl.h"
+    "src/detour/fwd.h"
+    "src/detour/remapper.cc"
+	"src/detour/remapper.h"
 	"src/memory/protection.cc"
 )
 
@@ -41,3 +51,5 @@ add_subdirectory("third_party/gtest")
 add_executable("spud.test" "tests/main.cc")
 target_link_libraries("spud.test" "gtest" "spud")
 add_dependencies("spud.test" "gtest" "spud")
+
+add_test(NAME spud.test COMMAND spud.test)
