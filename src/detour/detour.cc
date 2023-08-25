@@ -10,6 +10,8 @@
 #include <libkern/OSCacheControl.h>
 #endif
 
+#include <cstring>
+
 namespace spud {
 namespace detail {
 struct DetourImpl {

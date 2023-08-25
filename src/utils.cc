@@ -7,6 +7,8 @@
 #include <libkern/OSCacheControl.h>
 #include <pthread.h>
 #include <sys/mman.h>
+#elif SPUD_OS_LINUX
+#include <sys/mman.h>
 #else
 #error "Unsupported platform"
 #endif
@@ -22,6 +24,10 @@ void *alloc_executable_memory(size_t size) {
 #elif SPUD_OS_APPLE
   auto addr = mmap(NULL, size, PROT_READ | PROT_WRITE | PROT_EXEC,
                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_JIT, -1, 0);
+  return addr;
+#elif SPUD_OS_LINUX
+  auto addr = mmap(NULL, size, PROT_READ | PROT_WRITE | PROT_EXEC,
+                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   return addr;
 #endif
 }

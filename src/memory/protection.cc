@@ -7,6 +7,9 @@
 #include <mach/mach_init.h>
 #include <mach/mach_vm.h>
 #include <mach/vm_map.h>
+#elif SPUD_OS_LINUX
+#include <sys/mman.h>
+#include <unistd.h>
 #else
 #error "Unsupported platform"
 #endif
@@ -67,6 +70,23 @@ protection_scope::protection_scope(uintptr_t address, size_t size,
   auto err =
       mach_vm_protect(mach_task_self(), address_, size_, FALSE, protection);
   assert(err == KERN_SUCCESS);
+#elif SPUD_OS_LINUX
+  long pagesize = sysconf(_SC_PAGE_SIZE);
+  address = address - (address % pagesize);
+
+  int protection = 0;
+  if (protect == mem_protection::READ_WRITE_EXECUTE) {
+    protection = PROT_READ | PROT_WRITE | PROT_EXEC;
+  } else if (protect == mem_protection::READ) {
+    protection = PROT_READ;
+  } else if (protect == mem_protection::EXECUTE) {
+    protection = PROT_READ | PROT_EXEC;
+  } else if (protect == mem_protection::WRITE ||
+             protect == mem_protection::READ_WRITE) {
+    protection = PROT_READ | PROT_WRITE;
+  }
+
+  mprotect((void *)address, size, protection);
 #endif
 }
 protection_scope::~protection_scope() {
