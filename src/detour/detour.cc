@@ -24,9 +24,7 @@ struct DetourImpl {
                                   uintptr_t return_address,
                                   std::span<uint8_t> target,
                                   const RelocationInfo &relocation_infos);
-  uintptr_t(*maybe_resolve_jump)(uintptr_t) = [](auto v) {
-      return v;
-  };
+  uintptr_t (*maybe_resolve_jump)(uintptr_t) = [](auto v) { return v; };
 };
 
 const static std::array<DetourImpl, Arch::kCount> kDetourImpls = {
@@ -35,7 +33,7 @@ const static std::array<DetourImpl, Arch::kCount> kDetourImpls = {
                .collect_relocations = x64::collect_relocations,
                .get_trampoline_size = x64::get_trampoline_size,
                .create_trampoline = x64::create_trampoline,
-			   .maybe_resolve_jump = x64::maybe_resolve_jump},
+               .maybe_resolve_jump = x64::maybe_resolve_jump},
     // x86
     DetourImpl{.create_absolute_jump = x64::create_absolute_jump},
     // Arm64
@@ -48,6 +46,8 @@ const static std::array<DetourImpl, Arch::kCount> kDetourImpls = {
 detail::detour &detour::install(Arch arch) {
   const auto &impl = kDetourImpls[arch];
 
+  // We don't want to hook things that point to a direct jump
+  // This will resolve that jump and instead we hook the underlying function
   func_ = impl.maybe_resolve_jump(func_);
   address_ = impl.maybe_resolve_jump(address_);
 
@@ -56,6 +56,9 @@ detail::detour &detour::install(Arch arch) {
   auto [relocation_infos, required_trampoline_size] =
       impl.collect_relocations(address_, jump.size());
 
+  // Required trampoline size is how many bytes we have to take up of the
+  // original function This will then be used to calculate the expanded size,
+  // since we do have some instruction replacement and expansion going on
   auto trampoline_size = impl.get_trampoline_size(
       {reinterpret_cast<uint8_t *>(address_), required_trampoline_size},
       relocation_infos);
@@ -75,15 +78,11 @@ detail::detour &detour::install(Arch arch) {
 
   std::memcpy(trampoline_address, trampoline.data.data(),
               trampoline.data.size());
-
   trampoline_ =
       trampoline.start + reinterpret_cast<uintptr_t>(trampoline_address);
 
   {
-    // TODO(alexander): Expand this copy stuff to encompass the entire
-    // trampoline size that we copied from the original function
-    //
-    const auto copy_size = jump.size();
+    const auto copy_size = required_trampoline_size;
     original_func_data_.resize(copy_size);
     std::memcpy(original_func_data_.data(), reinterpret_cast<void *>(address_),
                 copy_size);
@@ -94,9 +93,12 @@ detail::detour &detour::install(Arch arch) {
       SPUD_SCOPED_PROTECTION(remap, copy_size,
                              mem_protection::READ_WRITE_EXECUTE);
 
-      // TODO
+      // This will leave some trashed instructions
+      // Which is okay for now
+      // TODO(tashcan): Add some kind of NOP function to make the remaining
+      // stuff "valid"
       std::memcpy(reinterpret_cast<void *>(uintptr_t(remap)), jump.data(),
-                  copy_size);
+                  jump.size());
 #if SPUD_OS_APPLE
       sys_dcache_flush((void *)address_, copy_size);
 #endif
