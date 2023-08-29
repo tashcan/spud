@@ -8,7 +8,9 @@ struct Remapper {
   Remapper(uintptr_t address, size_t size);
   ~Remapper();
 
-  operator uintptr_t() { return remap_; }
+  operator uintptr_t() {
+    return remap_;
+  }
 
 private:
   uintptr_t address_;

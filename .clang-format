@@ -1,0 +1,7 @@
+﻿---
+BasedOnStyle: LLVM
+AllowShortFunctionsOnASingleLine: Empty
+TabWidth: '2'
+UseTab: Never
+
+...

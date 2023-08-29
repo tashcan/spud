@@ -20,8 +20,8 @@
 #include <span>
 #include <string>
 #include <unordered_map>
-#include <vector>
 #include <variant>
+#include <vector>
 
 // Here shall be dragons, at some point
 
@@ -275,9 +275,9 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
           .expand = kReloMovExpandSize,
           .gen_relo_data =
               [](auto target_start, auto &relo, auto &assembler) {
-                const auto lea_target =
-                    target_start + ZyanI64(relo.address) + relo.instruction.length +
-                relo.operands[0].mem.disp.value;
+                const auto lea_target = target_start + ZyanI64(relo.address) +
+                                        relo.instruction.length +
+                                        relo.operands[0].mem.disp.value;
                 assembler.embed(&lea_target, sizeof(lea_target));
               },
           .gen_relo_code =
@@ -405,44 +405,47 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
   constexpr auto kRuntimeAddress = 0x0;
 
   while (decode_length >= 0 &&
-      ZYAN_SUCCESS(ZydisDisassembleIntel(
-          ZYDIS_MACHINE_MODE_LONG_64, kRuntimeAddress,
-          reinterpret_cast<void*>(address + decoder_offset), decode_length - decoder_offset,
-          &instruction))) {
-      auto inst = instruction.info;
+         ZYAN_SUCCESS(ZydisDisassembleIntel(
+             ZYDIS_MACHINE_MODE_LONG_64, kRuntimeAddress,
+             reinterpret_cast<void *>(address + decoder_offset),
+             decode_length - decoder_offset, &instruction))) {
+    auto inst = instruction.info;
 
-      relocation_info.relocation_offset[decoder_offset] = relocation_offset;
-      if (needs_relocate(decoder_offset, extend_trampoline_to, inst,
-          instruction.operands)) {
+    relocation_info.relocation_offset[decoder_offset] = relocation_offset;
+    if (needs_relocate(decoder_offset, extend_trampoline_to, inst,
+                       instruction.operands)) {
 
-          auto& r_meta = relo_meta.at(instruction.info);
-          relocation_offset += r_meta.expand;
+      auto &r_meta = relo_meta.at(instruction.info);
+      relocation_offset += r_meta.expand;
 
-          relocations.emplace_back(RelocationEntry{
-              decoder_offset, inst,
-              std::array{instruction.operands[0], instruction.operands[1],
-                         instruction.operands[2], instruction.operands[3],
-                         instruction.operands[4], instruction.operands[5],
-                         instruction.operands[6], instruction.operands[7],
-                         instruction.operands[8], instruction.operands[9]} });
-          extend_trampoline_to =
-              std::max(decoder_offset + inst.length, extend_trampoline_to);
-      }
-      else if (extend_trampoline_to < jump_size) {
-          extend_trampoline_to =
-              std::max(decoder_offset + inst.length, extend_trampoline_to);
-      }
+      relocations.emplace_back(RelocationEntry{
+          decoder_offset, inst,
+          std::array{instruction.operands[0], instruction.operands[1],
+                     instruction.operands[2], instruction.operands[3],
+                     instruction.operands[4], instruction.operands[5],
+                     instruction.operands[6], instruction.operands[7],
+                     instruction.operands[8], instruction.operands[9]}});
+      extend_trampoline_to =
+          std::max(decoder_offset + inst.length, extend_trampoline_to);
+    } else if (extend_trampoline_to < jump_size) {
+      extend_trampoline_to =
+          std::max(decoder_offset + inst.length, extend_trampoline_to);
+    }
 
-      // TODO(alexander): Can we somehow detect a function end here and then stop?
+    // TODO(alexander): Can we somehow detect a function end here and then stop?
 
-      decoder_offset += inst.length;
+    decoder_offset += inst.length;
   }
 
-  relocations.erase(std::remove_if(begin(relocations), end(relocations), [&](auto& v) {
-      return !needs_relocate(v.address, extend_trampoline_to, v.instruction, v.operands.data());
-  }), end(relocations));
+  relocations.erase(std::remove_if(begin(relocations), end(relocations),
+                                   [&](auto &v) {
+                                     return !needs_relocate(
+                                         v.address, extend_trampoline_to,
+                                         v.instruction, v.operands.data());
+                                   }),
+                    end(relocations));
 
-  relocation_info.relocations = { relocations.begin(), relocations.end()};
+  relocation_info.relocations = {relocations.begin(), relocations.end()};
 
   return {relocation_info, extend_trampoline_to};
 }

@@ -13,7 +13,9 @@ namespace detail {
 
 struct detour {
 public:
-  ~detour() { remove(); }
+  ~detour() {
+    remove();
+  }
 
   using Self = detail::detour;
 
