@@ -14,6 +14,11 @@
 #include <vector>
 
 namespace spud::detail::x64 {
+/*
+    jmp [rip+0]
+    0x00000000000
+*/
+constexpr auto kAbsoluteJumpSize = 6 + sizeof(uintptr_t);
 
 struct RelocationEntry {
   uintptr_t address;
