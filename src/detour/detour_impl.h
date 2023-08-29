@@ -1,7 +1,7 @@
 #pragma once
 
-#include "aarch64.h"
-#include "x86_64.h"
+#include "aarch64/aarch64.h"
+#include "x86_64/x86_64.h"
 
 #include <cstdint>
 #include <unordered_map>

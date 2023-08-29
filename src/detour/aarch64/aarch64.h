@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fwd.h"
+#include "detour/fwd.h"
 
 #include <cstdint>
 #include <span>

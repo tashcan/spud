@@ -1,4 +1,4 @@
-#include "detour_impl.h"
+#include "detour/detour_impl.h"
 
 #include <spud/detour.h>
 #include <spud/memory/protection.h>
