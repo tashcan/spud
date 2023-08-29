@@ -42,7 +42,7 @@ do_far_relocations(std::span<uint8_t> target, uintptr_t trampoline_address,
                    asmjit::CodeHolder &code, asmjit::x86::Assembler &assembler);
 
 static bool
-needs_relocate(uintptr_t decoder_offset, intptr_t offset,
+needs_relocate(uintptr_t decoder_offset, intptr_t code_end,
                ZydisDecodedInstruction &instruction,
                ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT]) {
 
@@ -59,14 +59,14 @@ needs_relocate(uintptr_t decoder_offset, intptr_t offset,
                                               kRuntimeAddress + decoder_offset,
                                               &result))) {
       const auto instruction_start = decoder_offset;
-      const auto inside_trampoline = instruction_start <= offset;
+      const auto inside_trampoline = instruction_start <= code_end;
 
       const auto reaches_into =
           (!inside_trampoline && result > kRuntimeAddress &&
-           result < (kRuntimeAddress + offset));
+           result <= (kRuntimeAddress + code_end));
       const auto reaches_outof =
-          (inside_trampoline &&
-           (result > (kRuntimeAddress + offset) || result < kRuntimeAddress));
+          (inside_trampoline && (result >= (kRuntimeAddress + code_end) ||
+                                 result < kRuntimeAddress));
       const auto need_relocate = (reaches_into || reaches_outof);
 
       if (need_relocate) {
@@ -152,7 +152,7 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
   relocations.erase(std::remove_if(begin(relocations), end(relocations),
                                    [&](auto &v) {
                                      return !needs_relocate(
-                                         v.address, extend_trampoline_to,
+                                         v.address, extend_trampoline_to - 1,
                                          v.instruction, v.operands.data());
                                    }),
                     end(relocations));
