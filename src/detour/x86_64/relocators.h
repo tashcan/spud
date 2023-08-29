@@ -31,8 +31,7 @@ struct ReloInstruction {
       : i(mn), b(b) {}
   constexpr ReloInstruction(ZydisMnemonic mn) : i(mn) {}
   constexpr ReloInstruction(ZydisDecodedInstruction instruction) {
-    if (instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE ||
-        instruction.mnemonic == ZYDIS_MNEMONIC_JMP) {
+    if (instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE) {
       i = ZYDIS_MNEMONIC_INVALID;
       b = ZYDIS_BRANCH_TYPE_MAX_VALUE;
     } else {

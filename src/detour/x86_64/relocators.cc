@@ -1,5 +1,7 @@
 #include "relocators.h"
 
+#include <cassert>
+
 namespace spud::detail::x64 {
 
 /*
@@ -29,8 +31,25 @@ constexpr auto kReloMovzxExpandSize = kReloAddsdSize - 10 - sizeof(uintptr_t);
 constexpr auto kReloMovSize = 16 + sizeof(uintptr_t);
 constexpr auto kReloMovExpandSize = kReloAddsdSize - 9 - sizeof(uintptr_t);
 
-const std::unordered_map<ReloInstruction, RelocationMeta,
-                                ReloInstructionHasher>
+static void write_adjusted_target(auto size, auto target_code, auto target) {
+  switch (size) {
+  case 8: {
+    assert(target < 0xFF && "immediate size too small for relocation");
+    *(int8_t *)(target_code) = target;
+  } break;
+  case 16: {
+    *(int16_t *)(target_code) = target;
+  } break;
+  case 32: {
+    *(int32_t *)(target_code) = target;
+  } break;
+  case 64: {
+    *(int64_t *)(target_code) = target;
+  } break;
+  }
+}
+
+const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
     relo_meta = {
         {JUMP_RELO_JMP_INSTRUCTION,
          {.size = sizeof(uintptr_t),
@@ -40,10 +59,10 @@ const std::unordered_map<ReloInstruction, RelocationMeta,
                 using namespace asmjit;
                 using namespace asmjit::x86;
 
-                const auto jump_target = (ZyanI64)target_start +
-                                         (ZyanI64)relo.address +
-                                         (relo.instruction.raw.imm[0].value.s +
-                                          (ZyanI64)relo.instruction.length);
+                ZyanU64 jump_target = 0;
+                ZydisCalcAbsoluteAddress(&relo.instruction, &relo.operands[0],
+                                         target_start + relo.address,
+                                         &jump_target);
 
                 assembler.jmp(ptr(rip, 0));
                 assembler.embed(&jump_target, sizeof(jump_target));
@@ -64,22 +83,9 @@ const std::unordered_map<ReloInstruction, RelocationMeta,
                                    relo.instruction.length - relo.address -
                                    target_offset;
 
-                switch (relo.instruction.raw.imm[0].size) {
-                case 8: {
-                  assert(jump_target < 0xFF &&
-                         "immediate size too small for relocation");
-                  *(int8_t *)(target_code) = jump_target;
-                } break;
-                case 16: {
-                  *(int16_t *)(target_code) = jump_target;
-                } break;
-                case 32: {
-                  *(int32_t *)(target_code) = jump_target;
-                } break;
-                case 64: {
-                  *(int64_t *)(target_code) = jump_target;
-                } break;
-                }
+                write_adjusted_target(relo.instruction.raw.imm[0].size,
+                                      target_code, jump_target);
+
                 return target_offset;
               }}},
         {ZYDIS_MNEMONIC_CMP,
@@ -143,22 +149,9 @@ const std::unordered_map<ReloInstruction, RelocationMeta,
                                        relo.instruction.length - relo.address -
                                        target_offset;
 
-                switch (relo.instruction.raw.disp.size) {
-                case 8: {
-                  assert(relo_lea_target < 0xFF &&
-                         "displacement size too small for relocation");
-                  *(int8_t *)(lea_target) = relo_lea_target;
-                } break;
-                case 16: {
-                  *(int16_t *)(lea_target) = relo_lea_target;
-                } break;
-                case 32: {
-                  *(int32_t *)(lea_target) = relo_lea_target;
-                } break;
-                case 64: {
-                  *(int64_t *)(lea_target) = relo_lea_target;
-                } break;
-                }
+                write_adjusted_target(relo.instruction.raw.disp.size,
+                                      lea_target, relo_lea_target);
+
                 return target_offset;
               }}},
         {ZYDIS_MNEMONIC_ADDSD,
