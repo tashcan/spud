@@ -17,12 +17,12 @@ mov1 proc
 mov1 endp
 
 mov2 proc
- test ecx, ecx
- jz mov2_zero
- ret
-mov2_zero:
- mov byte ptr[offset msg2], 1
- ret
+  test ecx, ecx
+  jz mov2_zero
+  ret
+ mov2_zero:
+  mov byte ptr[offset msg2], 1
+  ret
 mov2 endp
 
 mov3 proc

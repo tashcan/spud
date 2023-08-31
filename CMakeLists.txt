@@ -34,7 +34,9 @@ add_dependencies("spud" "Zydis" "asmjit")
 
 target_sources("spud"
 	PUBLIC
+    "include/spud/arch.h"
 	"include/spud/detour.h"
+    "include/spud/utils.h"
 	"include/spud/memory/protection.h"
 )
 
@@ -43,10 +45,12 @@ target_sources("spud"
 	"src/utils.cc"
 	"src/zydis_utils.cc"
 	"src/zydis_utils.h"
-	"src/detour/x86_64.cc"
-	"src/detour/x86_64.h"
-	"src/detour/aarch64.cc"
-	"src/detour/aarch64.h"
+	"src/detour/x86_64/x86_64.cc"
+	"src/detour/x86_64/x86_64.h"
+    "src/detour/x86_64/relocators.cc"
+    "src/detour/x86_64/relocators.h"
+	"src/detour/aarch64/aarch64.cc"
+	"src/detour/aarch64/aarch64.h"
     "src/detour/detour.cc"
     "src/detour/detour_impl.h"
     "src/detour/fwd.h"

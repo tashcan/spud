@@ -36,7 +36,7 @@ void hook(int n) {
 
 void hook_mov1() {}
 
-TEST_CASE("Simple Hook with a condition asm", "[simple]") {
+TEST_CASE("Simple Hook with a condition asm and removal", "[simple]") {
   REQUIRE(msg == false);
   mov1();
   REQUIRE(msg == true);
@@ -64,16 +64,6 @@ TEST_CASE("Simple Hook with a condition", "[simple]") {
   REQUIRE(condition_intact_for_hook == true);
 }
 
-TEST_CASE("Simple Hook with a condition 3", "[simple]") {
-  hook_ran = false;
-  auto t = spud::create_detour(&mov3, &hook);
-  t.install();
-  o_test_function = t.trampoline();
-  mov3(1);
-  REQUIRE(hook_ran == true);
-  REQUIRE(msg3 == true);
-}
-
 TEST_CASE("Simple Hook with a condition asm mov jump within trampoline",
           "[simple]") {
   hook_ran = false;
@@ -83,4 +73,14 @@ TEST_CASE("Simple Hook with a condition asm mov jump within trampoline",
   mov2(1);
   REQUIRE(hook_ran == true);
   REQUIRE(msg2 == true);
+}
+
+TEST_CASE("Simple Hook with a condition 3", "[simple]") {
+  hook_ran = false;
+  auto t = spud::create_detour(&mov3, &hook);
+  t.install();
+  o_test_function = t.trampoline();
+  mov3(1);
+  REQUIRE(hook_ran == true);
+  REQUIRE(msg3 == true);
 }
