@@ -12,10 +12,19 @@
 
 #include <cstring>
 
+#if SPUD_OS_APPLE || SPUD_OS_LINUX
+#define ASM_FUNC(n, a) n a asm(#n)
+#else
+#define ASM_FUNC(n, a) n a
+#endif
+
+extern "C" uintptr_t ASM_FUNC(spud_read_context_value, ());
+
 namespace spud {
 namespace detail {
 struct DetourImpl {
-  std::vector<uint8_t> (*create_absolute_jump)(uintptr_t target);
+  std::vector<uint8_t> (*create_absolute_jump)(uintptr_t target,
+                                               uintptr_t data);
   std::tuple<RelocationInfo, size_t> (*collect_relocations)(uintptr_t address,
                                                             size_t jump_size);
   size_t (*get_trampoline_size)(std::span<uint8_t> target,
@@ -48,10 +57,12 @@ detail::detour &detour::install(Arch arch) {
 
   // We don't want to hook things that point to a direct jump
   // This will resolve that jump and instead we hook the underlying function
-  func_ = impl.maybe_resolve_jump(func_);
+  // func_ = impl.maybe_resolve_jump(func_);
   address_ = impl.maybe_resolve_jump(address_);
+  wrapper_ = impl.maybe_resolve_jump(wrapper_);
 
-  auto jump = impl.create_absolute_jump(func_);
+  auto jump = impl.create_absolute_jump(
+      wrapper_, reinterpret_cast<uintptr_t>(context_container_.get()));
 
   auto [relocation_infos, required_trampoline_size] =
       impl.collect_relocations(address_, jump.size());
@@ -80,6 +91,9 @@ detail::detour &detour::install(Arch arch) {
               trampoline.data.size());
   trampoline_ =
       trampoline.start + reinterpret_cast<uintptr_t>(trampoline_address);
+
+  context_container_->func = func_;
+  context_container_->trampoline = trampoline_;
 
   {
     const auto copy_size = required_trampoline_size;
@@ -131,5 +145,10 @@ void detour::remove() {
   enable_jit_write_protection();
   original_func_data_.clear();
 }
+
+uintptr_t detour::get_context_value() {
+  return spud_read_context_value();
+}
+
 } // namespace detail
 } // namespace spud

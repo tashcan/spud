@@ -18,7 +18,7 @@ namespace spud::detail::x64 {
     jmp [rip+0]
     0x00000000000
 */
-constexpr auto kAbsoluteJumpSize = 6 + sizeof(uintptr_t);
+constexpr auto kAbsoluteJumpSize = 10 + 6 + sizeof(uintptr_t);
 
 struct RelocationEntry {
   uintptr_t address;
@@ -26,7 +26,7 @@ struct RelocationEntry {
   std::array<ZydisDecodedOperand, ZYDIS_MAX_OPERAND_COUNT> operands;
 };
 
-std::vector<uint8_t> create_absolute_jump(uintptr_t target);
+std::vector<uint8_t> create_absolute_jump(uintptr_t target, uintptr_t container);
 std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
                                                        size_t jump_size);
 size_t get_trampoline_size(std::span<uint8_t> target,

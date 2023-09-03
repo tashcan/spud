@@ -1,5 +1,7 @@
 #include "relocators.h"
 
+#include "detour/detour_impl.h"
+
 #include <cassert>
 
 namespace spud::detail::x64 {
@@ -55,7 +57,8 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
          {.size = sizeof(uintptr_t),
           .expand = 0,
           .gen_relo_data =
-              [](auto target_start, auto &relo, auto &assembler) {
+              [](auto target_start, auto &relo, auto &assembler,
+                 auto &relo_info) {
                 using namespace asmjit;
                 using namespace asmjit::x86;
 
@@ -65,6 +68,16 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                                          &jump_target);
 
                 assembler.jmp(ptr(rip, 0));
+                printf("Magical %p\n",
+                       jump_target - target_start - relo.address);
+                try {
+                  auto offset = relo_info.relocation_offset.at(
+                      jump_target - target_start - relo.address);
+                  printf("offset %p\n", offset);
+                  jump_target += offset;
+                } catch (...) {
+                }
+                printf("Target %p\n", jump_target);
                 assembler.embed(&jump_target, sizeof(jump_target));
               },
           .gen_relo_code =
@@ -92,7 +105,8 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
          {.size = kReloCompareSize,
           .expand = kReloCompareExpandSize,
           .gen_relo_data =
-              [](auto target_start, auto &relo, auto &assembler) {
+              [](auto target_start, auto &relo, auto &assembler,
+                 auto &relo_info) {
                 const auto lea_target =
                     target_start + relo.address +
                     (relo.instruction.raw.disp.value + relo.instruction.length);
@@ -121,7 +135,8 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
          {.size = sizeof(uintptr_t),
           .expand = 0,
           .gen_relo_data =
-              [](auto target_start, auto &relo, auto &assembler) {
+              [](auto target_start, auto &relo, auto &assembler,
+                 auto &relo_info) {
                 const auto lea_target =
                     target_start + relo.address +
                     (relo.instruction.raw.disp.value + relo.instruction.length);
@@ -158,7 +173,8 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
          {.size = kReloAddsdSize,
           .expand = kReloAddsdExpandSize,
           .gen_relo_data =
-              [](auto target_start, auto &relo, auto &assembler) {
+              [](auto target_start, auto &relo, auto &assembler,
+                 auto &relo_info) {
                 const auto lea_target =
                     target_start + relo.address +
                     (relo.instruction.raw.disp.value + relo.instruction.length);
@@ -186,7 +202,8 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
          {.size = kReloMovSize,
           .expand = kReloMovExpandSize,
           .gen_relo_data =
-              [](auto target_start, auto &relo, auto &assembler) {
+              [](auto target_start, auto &relo, auto &assembler,
+                 auto &relo_info) {
                 const auto lea_target = target_start + ZyanI64(relo.address) +
                                         relo.instruction.length +
                                         relo.operands[0].mem.disp.value;
@@ -212,7 +229,8 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
          {.size = kReloMovzxSize,
           .expand = kReloMovzxExpandSize,
           .gen_relo_data =
-              [](auto target_start, auto &relo, auto &assembler) {
+              [](auto target_start, auto &relo, auto &assembler,
+                 auto &relo_info) {
                 const auto lea_target =
                     target_start + relo.address +
                     (relo.instruction.raw.disp.value + relo.instruction.length);

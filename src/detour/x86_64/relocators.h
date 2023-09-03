@@ -15,7 +15,8 @@ struct RelocationMeta {
   uintptr_t size;
   uintptr_t expand;
   void (*gen_relo_data)(uintptr_t, const RelocationEntry &,
-                        asmjit::x86::Assembler &);
+                        asmjit::x86::Assembler &,
+                        const RelocationInfo &relocation_info);
   uintptr_t (*gen_relo_code)(uintptr_t trampoline_address,
                              uintptr_t trampoline_start, uintptr_t target_start,
                              size_t target_offset, const RelocationEntry &relo,
