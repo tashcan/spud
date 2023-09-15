@@ -234,6 +234,8 @@ Trampoline create_trampoline(uintptr_t trampoline_address,
                     target.size() - relocation_result.copy_offset);
     assembler.jmp(ptr(rip, 0));
     assembler.embed(&return_address, sizeof(return_address));
+    auto data_offset = assembler.code()->textSection()->bufferSize();
+    data_offset = data_offset;
     assembler.embed(relocation_result.data.data(),
                     relocation_result.data.size());
   } else {
@@ -284,23 +286,17 @@ static RelocationResult do_far_relocations(
   reloc_code.init(Environment::host(), relocation_data_offset); // Need base?
   x86::Assembler reloc_assembler(&reloc_code);
 
+  size_t relocation_data_idx = 0;
+  size_t copy_offset = 0;
+
   for (const auto &relocation : relocation_info.relocations) {
     const auto &relo = std::get<x64::RelocationEntry>(relocation);
     const auto &r_meta = relo_meta.at(relo.instruction);
 
     relocation_data.emplace_back(relocation_data_offset +
                                  reloc_code.textSection()->bufferSize());
-    r_meta.gen_relo_data(target, relo, reloc_assembler, relocation_info);
-  }
-
-  size_t relocation_data_idx = 0;
-  size_t copy_offset = 0;
-  // This is for things like cmp that insert new instructions, so we are at the
-  // right location in the buffer :)
-  size_t target_offset = 0;
-  for (const auto &relot : relocation_info.relocations) {
-    const auto &relo = std::get<x64::RelocationEntry>(relot);
-    const auto &r_meta = relo_meta.at(relo.instruction);
+    const auto did_generate_data =
+        r_meta.gen_relo_data(target, relo, reloc_assembler, relocation_info);
 
     if (r_meta.expand == 0) {
       // Embed everything up to here from the last end of instruction
@@ -316,9 +312,9 @@ static RelocationResult do_far_relocations(
 
     // Place the cursor at the end of the instruction
     copy_offset = relo.address + relo.instruction.length;
-    target_offset = r_meta.gen_relo_code(
-        trampoline_address, target_start, target_offset, relo,
-        relocation_data[relocation_data_idx], assembler);
+    r_meta.gen_relo_code(trampoline_address, target, relo,
+                         relocation_info, did_generate_data,
+                         relocation_data[relocation_data_idx], assembler);
     ++relocation_data_idx;
   }
 

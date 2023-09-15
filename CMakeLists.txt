@@ -40,26 +40,6 @@ target_sources("spud"
 	"include/spud/memory/protection.h"
 )
 
-target_sources("spud"
-	PRIVATE
-	"src/utils.cc"
-	"src/zydis_utils.cc"
-	"src/zydis_utils.h"
-	"src/detour/x86_64/x86_64.cc"
-	"src/detour/x86_64/x86_64.h"
-    "src/detour/x86_64/relocators.cc"
-    "src/detour/x86_64/relocators.h"
-	"src/detour/aarch64/aarch64.cc"
-	"src/detour/aarch64/aarch64.h"
-    "src/detour/detour.cc"
-    "src/detour/detour.S"
-    "src/detour/detour_impl.h"
-    "src/detour/fwd.h"
-    "src/detour/remapper.cc"
-	"src/detour/remapper.h"
-	"src/memory/protection.cc"
-)
-
 target_include_directories("spud" PUBLIC "include" PRIVATE "src")
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch")
@@ -102,16 +82,47 @@ if(CMAKE_OSX_ARCHITECTURES)
     endif()
 endif()
 
+if (WIN32)
+    file(GLOB_RECURSE ASM_SRCS src/detour/x86_64/*.asm)
+else()
+if (ARCH MATCHES "arm64")
+    file(GLOB_RECURSE ASM_SRCS src/detour/aarch64/*.S)
+else()
+    file(GLOB_RECURSE ASM_SRCS src/detour/x86_64/*.S)
+endif()
+
+endif(WIN32)
+target_sources("spud"
+	PRIVATE
+	"src/utils.cc"
+	"src/zydis_utils.cc"
+	"src/zydis_utils.h"
+	"src/detour/x86_64/x86_64.cc"
+	"src/detour/x86_64/x86_64.h"
+    "src/detour/x86_64/relocators.cc"
+    "src/detour/x86_64/relocators.h"
+	"src/detour/aarch64/aarch64.cc"
+	"src/detour/aarch64/aarch64.h"
+    "src/detour/detour.cc"
+    "src/detour/detour_impl.h"
+    "src/detour/fwd.h"
+    "src/detour/remapper.cc"
+	"src/detour/remapper.h"
+	"src/memory/protection.cc"
+    "${ASM_SRCS}"
+)
+
+
 if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
 
 if (WIN32)
-file( GLOB_RECURSE TEST_SRCS tests/x86_64/*.cc tests/x86_64/*.h tests/x86_64/*.asm)
+file(GLOB_RECURSE TEST_SRCS tests/x86_64/*.cc tests/x86_64/*.h tests/x86_64/*.asm)
 else()
 
 if (ARCH MATCHES "arm64")
-file( GLOB_RECURSE TEST_SRCS tests/arm64/*.cc tests/arm64/*.h tests/arm64/*.S)
+file(GLOB_RECURSE TEST_SRCS tests/arm64/*.cc tests/arm64/*.h tests/arm64/*.S)
 else()
-file( GLOB_RECURSE TEST_SRCS tests/x86_64/*.cc tests/x86_64/*.h tests/x86_64/*.S)
+file(GLOB_RECURSE TEST_SRCS tests/x86_64/*.cc tests/x86_64/*.h tests/x86_64/*.S)
 endif()
 
 endif(WIN32)
