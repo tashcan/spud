@@ -6,6 +6,8 @@
 
 namespace spud::detail::x64 {
 
+using namespace asmjit;
+using namespace asmjit::x86;
 /*
     push r15
     mov r15, qword ptr [0x10]
@@ -30,8 +32,8 @@ constexpr auto kReloAddsdExpandSize = kReloAddsdSize - 9 - sizeof(uintptr_t);
 constexpr auto kReloMovzxSize = 16 + sizeof(uintptr_t);
 constexpr auto kReloMovzxExpandSize = kReloAddsdSize - 10 - sizeof(uintptr_t);
 
-constexpr auto kReloMovSize = 16 + sizeof(uintptr_t);
-constexpr auto kReloMovExpandSize = kReloAddsdSize - 9 - sizeof(uintptr_t);
+constexpr auto kReloMovSize = 15 + sizeof(uintptr_t);
+constexpr auto kReloMovExpandSize = kReloMovSize - 7 - sizeof(uintptr_t);
 
 static void write_adjusted_target(auto size, auto target_code, auto target) {
   switch (size) {
@@ -51,6 +53,37 @@ static void write_adjusted_target(auto size, auto target_code, auto target) {
   }
 }
 
+/* ZyanU64
+CalcAbsoluteAddressForRelocation(const RelocationEntry &relo,
+                                 const RelocationInfo &relocation_info, ) {
+  const auto &instruction = relo.instruction;
+  const auto &operands = relo.operands;
+
+  for (auto i = 0; i < instruction.operand_count; ++i) {
+    ZyanU64 result = 0;
+    const auto &operand = operands[i];
+    if (ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(&instruction, &operand,
+                                              kRuntimeAddress + decoder_offset,
+                                              &result))) {
+      const auto instruction_start = decoder_offset;
+      const auto inside_trampoline = instruction_start <= code_end;
+
+      const auto reaches_into =
+          (!inside_trampoline && result > kRuntimeAddress &&
+           result <= (kRuntimeAddress + code_end));
+      const auto reaches_outof =
+          (inside_trampoline && (result >= (kRuntimeAddress + code_end) ||
+                                 result < kRuntimeAddress));
+      const auto need_relocate = (reaches_into || reaches_outof);
+
+      if (need_relocate) {
+        return true;
+      }
+    }
+  }
+}
+*/
+
 const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
     relo_meta = {
         {JUMP_RELO_JMP_INSTRUCTION,
@@ -59,42 +92,34 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
           .gen_relo_data =
               [](auto target_start, auto &relo, auto &assembler,
                  auto &relo_info) {
-                using namespace asmjit;
-                using namespace asmjit::x86;
-
                 ZyanU64 jump_target = 0;
                 ZydisCalcAbsoluteAddress(&relo.instruction, &relo.operands[0],
                                          target_start + relo.address,
                                          &jump_target);
-
                 assembler.jmp(ptr(rip, 0));
-                printf("Magical %p\n",
-                       jump_target - target_start - relo.address);
-                try {
-                  auto offset = relo_info.relocation_offset.at(
-                      jump_target - target_start - relo.address);
-                  printf("offset %p\n", offset);
-                  jump_target += offset;
-                } catch (...) {
-                }
-                printf("Target %p\n", jump_target);
+
+                auto offset = relo_info.relocation_offset.at(
+                    jump_target - target_start - relo.address);
+                jump_target += offset + 16;
+                printf("Relocating jump %p %p %d\n",
+                       target_start + relo.address, jump_target, offset);
                 assembler.embed(&jump_target, sizeof(jump_target));
               },
           .gen_relo_code =
-              [](uintptr_t trampoline_address, uintptr_t trampoline_start,
-                 uintptr_t target_start, size_t target_offset,
-                 const RelocationEntry &relo, uintptr_t relocation_data,
-                 asmjit::x86::Assembler &assembler) {
+              [](uintptr_t trampoline_address, uintptr_t target_start,
+                 size_t target_offset, const RelocationEntry &relo,
+                 uintptr_t relocation_data, Assembler &assembler) {
+                // return target_offset;
                 auto *code = assembler.code();
                 auto *code_data = code->textSection()->data();
 
                 auto target_code = reinterpret_cast<uint8_t *>(
-                    target_offset + code_data + trampoline_start +
-                    relo.address + relo.instruction.raw.imm[0].offset);
+                    target_offset + code_data + relo.address +
+                    relo.instruction.raw.imm[0].offset);
 
-                auto jump_target = relocation_data + trampoline_start -
-                                   relo.instruction.length - relo.address -
-                                   target_offset;
+                const auto jump_target = relocation_data -
+                                         relo.instruction.length -
+                                         relo.address - target_offset;
 
                 write_adjusted_target(relo.instruction.raw.imm[0].size,
                                       target_code, jump_target);
@@ -107,20 +132,20 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
           .gen_relo_data =
               [](auto target_start, auto &relo, auto &assembler,
                  auto &relo_info) {
+                ZyanU64 jump_target = 0;
+                ZydisCalcAbsoluteAddress(&relo.instruction, &relo.operands[0],
+                                         target_start + relo.address,
+                                         &jump_target);
                 const auto lea_target =
                     target_start + relo.address +
                     (relo.instruction.raw.disp.value + relo.instruction.length);
                 assembler.embed(&lea_target, sizeof(lea_target));
               },
           .gen_relo_code =
-              [](uintptr_t trampoline_address, uintptr_t trampoline_start,
-                 uintptr_t target_start, size_t target_offset,
-                 const RelocationEntry &relo, uintptr_t relocation_data,
-                 asmjit::x86::Assembler &assembler) {
-                using namespace asmjit;
-                using namespace asmjit::x86;
-
-                auto relo_lea_target = trampoline_start + relocation_data;
+              [](uintptr_t trampoline_address, uintptr_t target_start,
+                 size_t target_offset, const RelocationEntry &relo,
+                 uintptr_t relocation_data, Assembler &assembler) {
+                auto relo_lea_target = relocation_data;
                 assembler.push(r15);
                 assembler.mov(r15, qword_ptr(relo_lea_target));
                 assembler.cmp(byte_ptr(r15),
@@ -143,16 +168,14 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                 assembler.embed(&lea_target, sizeof(lea_target));
               },
           .gen_relo_code =
-              [](uintptr_t trampoline_address, uintptr_t trampoline_start,
-                 uintptr_t target_start, size_t target_offset,
-                 const RelocationEntry &relo, uintptr_t relocation_data,
-                 asmjit::x86::Assembler &assembler) {
+              [](uintptr_t trampoline_address, uintptr_t target_start,
+                 size_t target_offset, const RelocationEntry &relo,
+                 uintptr_t relocation_data, Assembler &assembler) {
                 auto *code = assembler.code();
                 auto *code_data = code->textSection()->data();
 
                 auto target_code = reinterpret_cast<uint8_t *>(
-                    target_offset + code_data + trampoline_start +
-                    relo.address);
+                    target_offset + code_data + relo.address);
                 auto lea_target = reinterpret_cast<uint8_t *>(
                     target_code + relo.instruction.raw.disp.offset);
 
@@ -160,7 +183,7 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                 // address from our data section below the instructions
                 *(target_code + 0x1) = 0x8B;
 
-                auto relo_lea_target = relocation_data + trampoline_start -
+                auto relo_lea_target = relocation_data -
                                        relo.instruction.length - relo.address -
                                        target_offset;
 
@@ -181,13 +204,9 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                 assembler.embed(&lea_target, sizeof(lea_target));
               },
           .gen_relo_code =
-              [](uintptr_t trampoline_address, uintptr_t trampoline_start,
-                 uintptr_t target_start, size_t target_offset,
-                 const RelocationEntry &relo, uintptr_t relocation_data,
-                 asmjit::x86::Assembler &assembler) {
-                using namespace asmjit;
-                using namespace asmjit::x86;
-
+              [](uintptr_t trampoline_address, uintptr_t target_start,
+                 size_t target_offset, const RelocationEntry &relo,
+                 uintptr_t relocation_data, Assembler &assembler) {
                 auto relo_lea_target = trampoline_address + relocation_data;
                 assembler.push(r15);
                 assembler.mov(r15, qword_ptr(relo_lea_target));
@@ -210,19 +229,15 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                 assembler.embed(&lea_target, sizeof(lea_target));
               },
           .gen_relo_code =
-              [](uintptr_t trampoline_address, uintptr_t trampoline_start,
-                 uintptr_t target_start, size_t target_offset,
-                 const RelocationEntry &relo, uintptr_t relocation_data,
-                 asmjit::x86::Assembler &assembler) {
-                using namespace asmjit;
-                using namespace asmjit::x86;
-
+              [](uintptr_t trampoline_address, uintptr_t target_start,
+                 size_t target_offset, const RelocationEntry &relo,
+                 uintptr_t relocation_data, Assembler &assembler) {
                 auto relo_lea_target = trampoline_address + relocation_data;
                 assembler.push(r15);
                 assembler.mov(r15, qword_ptr(relo_lea_target));
                 assembler.mov(byte_ptr(r15), relo.operands[1].imm.value.s);
                 assembler.pop(r15);
-                target_offset += kReloAddsdExpandSize;
+                target_offset += kReloMovExpandSize;
                 return target_offset;
               }}},
         {ZYDIS_MNEMONIC_MOVZX,
@@ -237,13 +252,9 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                 assembler.embed(&lea_target, sizeof(lea_target));
               },
           .gen_relo_code =
-              [](uintptr_t trampoline_address, uintptr_t trampoline_start,
-                 uintptr_t target_start, size_t target_offset,
-                 const RelocationEntry &relo, uintptr_t relocation_data,
-                 asmjit::x86::Assembler &assembler) {
-                using namespace asmjit;
-                using namespace asmjit::x86;
-
+              [](uintptr_t trampoline_address, uintptr_t target_start,
+                 size_t target_offset, const RelocationEntry &relo,
+                 uintptr_t relocation_data, Assembler &assembler) {
                 auto relo_lea_target = trampoline_address + relocation_data;
                 assembler.push(r15);
                 assembler.mov(r15, qword_ptr(relo_lea_target));

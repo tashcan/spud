@@ -38,13 +38,22 @@ struct RelocationResult {
 };
 
 static RelocationResult
-do_far_relocations(std::span<uint8_t> target, uintptr_t trampoline_address,
-                   const size_t &trampoline_start,
+do_far_relocations(std::span<uint8_t> target,
+                   const uintptr_t trampoline_address,
                    const RelocationInfo &relocation_info,
                    asmjit::CodeHolder &code, asmjit::x86::Assembler &assembler);
 
 static bool is_jump(ZydisDecodedInstruction &instruction) {
-  return (instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE);
+  // TODO(alexander): This is less than ideal
+  // actually we need relative plus jump?
+  const auto non_ret_branch =
+      (instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE) &&
+      (instruction.mnemonic != ZYDIS_MNEMONIC_RET);
+
+  if (non_ret_branch) {
+    assert((instruction.attributes & ZYDIS_ATTRIB_IS_RELATIVE) != 0);
+  }
+  return non_ret_branch;
 }
 
 static bool
@@ -192,10 +201,8 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
 size_t get_trampoline_size(std::span<uint8_t> target,
                            const RelocationInfo &relocation_info) {
   size_t required_space = target.size();
-
-  auto target_start = reinterpret_cast<uintptr_t>(target.data());
-  for (const auto &relot : relocation_info.relocations) {
-    const auto &relo = std::get<RelocationEntry>(relot);
+  for (const auto &relocation : relocation_info.relocations) {
+    const auto &relo = std::get<RelocationEntry>(relocation);
     const auto &r_meta = relo_meta.at(relo.instruction);
 
     required_space += r_meta.size;
@@ -215,18 +222,14 @@ Trampoline create_trampoline(uintptr_t trampoline_address,
   code.init(Environment::host(), trampoline_address);
   x86::Assembler assembler(&code);
 
-  const auto target_start = reinterpret_cast<uintptr_t>(target.data());
-  const auto trampoline_start = code.textSection()->buffer().size();
-
   const auto is_far_relocate = true;
 
   if (is_far_relocate) {
     // We don't embed the data here as we are re-building instructions, so
     // we can't just copy it
 
-    auto relocation_result =
-        do_far_relocations(target, trampoline_address, trampoline_start,
-                           relocations, code, assembler);
+    auto relocation_result = do_far_relocations(target, trampoline_address,
+                                                relocations, code, assembler);
     assembler.embed(target.data() + relocation_result.copy_offset,
                     target.size() - relocation_result.copy_offset);
     assembler.jmp(ptr(rip, 0));
@@ -248,40 +251,46 @@ Trampoline create_trampoline(uintptr_t trampoline_address,
   intptr_t decode_length = 0x40;
   ZydisDisassembledInstruction instruction;
 
-  return {trampoline_start, {buffer.begin(), buffer.end()}};
+  return {0, {buffer.begin(), buffer.end()}};
 }
 
 static RelocationResult do_far_relocations(
-    std::span<uint8_t> target, uintptr_t trampoline_address,
-    const size_t &trampoline_start, const RelocationInfo &relocation_info,
-    asmjit::CodeHolder &code, asmjit::x86::Assembler &assembler) {
+    std::span<uint8_t> target, const uintptr_t trampoline_address,
+    const RelocationInfo &relocation_info, asmjit::CodeHolder &code,
+    asmjit::x86::Assembler &assembler) {
   using namespace asmjit;
   using namespace asmjit::x86;
 
-  auto target_start = uintptr_t(target.data());
-
   std::vector<uintptr_t> relocation_data;
 
-  size_t data_offset = target.size() + 14;
+  size_t relocation_data_offset = target.size() + 14;
 
-  for (const auto &relot : relocation_info.relocations) {
-    const auto &relo = std::get<x64::RelocationEntry>(relot);
+  // TODO(alexander): This is effectively what get_trampoline_size does
+  // so we should probably clean that up here at some point
+
+  // Here we determine how much space we need for all the instructions to fit
+  // as we already know how big our original code block was
+  // we only have to extend this by the expand size of each relocation
+  // After this we know how much space the instrcutions will take which allows
+  // us to then place the relocation support data at the end
+  for (const auto &relocation : relocation_info.relocations) {
+    const auto &relo = std::get<x64::RelocationEntry>(relocation);
     const auto &r_meta = relo_meta.at(relo.instruction);
 
-    data_offset += r_meta.expand;
+    relocation_data_offset += r_meta.expand;
   }
 
   CodeHolder reloc_code;
-  reloc_code.init(Environment::host(), data_offset); // Need base?
+  reloc_code.init(Environment::host(), relocation_data_offset); // Need base?
   x86::Assembler reloc_assembler(&reloc_code);
 
-  for (const auto &relot : relocation_info.relocations) {
-    const auto &relo = std::get<x64::RelocationEntry>(relot);
+  for (const auto &relocation : relocation_info.relocations) {
+    const auto &relo = std::get<x64::RelocationEntry>(relocation);
     const auto &r_meta = relo_meta.at(relo.instruction);
 
-    relocation_data.emplace_back(data_offset +
+    relocation_data.emplace_back(relocation_data_offset +
                                  reloc_code.textSection()->bufferSize());
-    r_meta.gen_relo_data(target_start, relo, reloc_assembler, relocation_info);
+    r_meta.gen_relo_data(target, relo, reloc_assembler, relocation_info);
   }
 
   size_t relocation_data_idx = 0;
@@ -294,15 +303,21 @@ static RelocationResult do_far_relocations(
     const auto &r_meta = relo_meta.at(relo.instruction);
 
     if (r_meta.expand == 0) {
+      // Embed everything up to here from the last end of instruction
+      // Including the currently operated on instruction since we are going to
+      // modify it
       assembler.embed(target.data() + copy_offset,
-                      relo.address + relo.instruction.length - copy_offset);
-    } else {
+                      relo.address - copy_offset + relo.instruction.length);
+    } else if ((relo.address - copy_offset) > 0) {
+      // Embed everything up to here from the last end of instruction
+      // This skips the currently operated on instruction
       assembler.embed(target.data() + copy_offset, relo.address - copy_offset);
     }
 
+    // Place the cursor at the end of the instruction
     copy_offset = relo.address + relo.instruction.length;
     target_offset = r_meta.gen_relo_code(
-        trampoline_address, trampoline_start, target_start, target_offset, relo,
+        trampoline_address, target_start, target_offset, relo,
         relocation_data[relocation_data_idx], assembler);
     ++relocation_data_idx;
   }
