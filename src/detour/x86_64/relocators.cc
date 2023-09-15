@@ -141,7 +141,7 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                 auto target_code = reinterpret_cast<uint8_t *>(code_data +
                     assembler.code()->textSection()->bufferSize() - relo.instruction.length +
                     relo.instruction.raw.imm[0].offset);
-              
+
                 if (has_data) {
                     const auto jump_target =
                         relocation_data -
@@ -177,7 +177,8 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                   }
                 }
 
-              }}},
+              },
+          .copy_instruction = true}},
         {ZYDIS_MNEMONIC_CMP,
          {.size = kReloCompareSize,
           .expand = kReloCompareExpandSize,
@@ -201,7 +202,7 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                  const RelocationEntry &relo,
                  const RelocationInfo &relocation_info, bool has_data,
                  uintptr_t relocation_data, asmjit::x86::Assembler &assembler) {
-                const auto relo_lea_target = relocation_data;
+                const auto relo_lea_target = trampoline_address + relocation_data;
                 assembler.push(r15);
                 assembler.mov(r15, qword_ptr(relo_lea_target));
                 assembler.cmp(byte_ptr(r15),
@@ -218,10 +219,14 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                 auto target_start = reinterpret_cast<uintptr_t>(target.data());
                 auto target_end = target_start + target.size();
 
-                const auto lea_target =
-                    target_start + relo.address +
-                    (relo.instruction.raw.disp.value + relo.instruction.length);
-                assembler.embed(&lea_target, sizeof(lea_target));
+                ZyanU64 lea_target = 0;
+                if (ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
+                        &relo.instruction, &relo.operands[1],
+                        target_start + relo.address, &lea_target))) {
+                  assembler.embed(&lea_target, sizeof(lea_target));
+                } else {
+                  assert(false);
+                }
                 return true;
               },
           .gen_relo_code =
@@ -231,22 +236,11 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                  uintptr_t relocation_data, asmjit::x86::Assembler &assembler) {
                 auto *code = assembler.code();
                 auto *code_data = code->textSection()->data();
-
-                auto target_code = reinterpret_cast<uint8_t *>(
-                    assembler.code()->textSection()->bufferSize() + code_data);
-                auto lea_target = reinterpret_cast<uint8_t *>(
-                    target_code + relo.instruction.raw.disp.offset);
-
-                // Turn the lea into a mov of a qword ptr, we'll load the
-                // address from our data section below the instructions
-                *(target_code + 0x1) = 0x8B;
-
-                auto relo_lea_target = relocation_data - relo.instruction.length -
-                    assembler.code()->textSection()->bufferSize();
-
-                write_adjusted_target(relo.instruction.raw.disp.size,
-                                      lea_target, relo_lea_target);
-              }}},
+                assembler.mov(
+                    zydis_q_reg_to_asmjit(relo.operands[0].reg.value),
+                              qword_ptr(trampoline_address + relocation_data));
+              },
+.copy_instruction = false}},
         {ZYDIS_MNEMONIC_ADDSD,
          {.size = kReloAddsdSize,
           .expand = kReloAddsdExpandSize,

@@ -23,6 +23,7 @@ struct RelocationMeta {
                              bool has_data,
                              uintptr_t relocation_data,
                              asmjit::x86::Assembler &assembler);
+  bool copy_instruction = false;
 };
 
 struct ReloInstruction {

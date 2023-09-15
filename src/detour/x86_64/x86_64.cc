@@ -57,7 +57,7 @@ static bool is_jump(ZydisDecodedInstruction &instruction) {
 }
 
 static bool
-needs_relocate(uintptr_t decoder_offset, intptr_t code_end,
+needs_relocate(uintptr_t decoder_offset, intptr_t code_end, intptr_t jump_size,
                ZydisDecodedInstruction &instruction,
                ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT]) {
 
@@ -74,7 +74,8 @@ needs_relocate(uintptr_t decoder_offset, intptr_t code_end,
                                               kRuntimeAddress + decoder_offset,
                                               &result))) {
       const auto instruction_start = decoder_offset;
-      const auto inside_trampoline = instruction_start <= code_end;
+      const auto inside_trampoline =
+          instruction_start < code_end || instruction_start <= jump_size;
 
       const auto reaches_into =
           (!inside_trampoline && result > kRuntimeAddress &&
@@ -140,7 +141,7 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
 
     relocation_info.relocation_offset[decoder_offset] = relocation_offset;
 
-    if (is_jump(inst) || needs_relocate(decoder_offset, extend_trampoline_to,
+    if (needs_relocate(decoder_offset, extend_trampoline_to, jump_size,
                                         inst, instruction.operands)) {
       auto &r_meta = relo_meta.at(instruction.info);
       relocation_offset += r_meta.expand;
@@ -159,8 +160,6 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
           std::max(decoder_offset + inst.length, extend_trampoline_to);
     }
 
-    // TODO(alexander): Can we somehow detect a function end here and then stop?
-
     decoder_offset += inst.length;
   }
 
@@ -169,7 +168,7 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
                      [&](auto &v) {
                        return !(
                            is_jump(v.instruction) ||
-                           needs_relocate(v.address, extend_trampoline_to - 1,
+                           needs_relocate(v.address, extend_trampoline_to - 1, jump_size,
                                           v.instruction, v.operands.data()));
                      }),
       end(relocations));
@@ -298,7 +297,7 @@ static RelocationResult do_far_relocations(
     const auto did_generate_data =
         r_meta.gen_relo_data(target, relo, reloc_assembler, relocation_info);
 
-    if (r_meta.expand == 0) {
+    if (r_meta.copy_instruction) {
       // Embed everything up to here from the last end of instruction
       // Including the currently operated on instruction since we are going to
       // modify it

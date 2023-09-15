@@ -61,6 +61,7 @@ protected:
   void remove();
   Self &detach() {
     original_func_data_.clear();
+    context_container_.release();
 
     return *this;
   }
