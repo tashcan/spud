@@ -50,6 +50,7 @@ public:
 
 protected:
   struct ContextContainer {
+    uintptr_t r15;
     uintptr_t func;
     uintptr_t trampoline;
     std::source_location location;

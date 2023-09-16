@@ -9,10 +9,10 @@ namespace spud::detail::x64 {
 using namespace asmjit;
 using namespace asmjit::x86;
 /*
-    push r15
-    mov r15, qword ptr [0x10]
-    cmp byte ptr [r15], 1
-    pop r15
+    push r11
+    mov r11, qword ptr [0x10]
+    cmp byte ptr [r11], 1
+    pop r11
     0x00000000000
 */
 constexpr auto kReloCompareSize = 16 + sizeof(uintptr_t);
@@ -20,10 +20,10 @@ constexpr auto kReloCompareExpandSize =
     kReloCompareSize - 8 - sizeof(uintptr_t);
 
 /*
-    push   r15
-    mov    r15, qword ptr[0x10]
-    addsd  xmm3,mmword ptr [r15]
-    pop    r15
+    push   r11
+    mov    r11, qword ptr[0x10]
+    addsd  xmm3,mmword ptr [r11]
+    pop    r11
     0x00000000000
 */
 constexpr auto kReloAddsdSize = 17 + sizeof(uintptr_t);
@@ -214,13 +214,13 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                  const RelocationInfo &relocation_info, bool has_data,
                  uintptr_t relocation_data, asmjit::x86::Assembler &assembler) {
                 const auto relo_lea_target = trampoline_address + relocation_data;
-                assembler.push(r15);
-                assembler.mov(r15, qword_ptr(relo_lea_target));
-                assembler.cmp(byte_ptr(r15),
+                assembler.push(r11);
+                assembler.mov(r11, qword_ptr(relo_lea_target));
+                assembler.cmp(byte_ptr(r11),
                               relo.operands[1].imm.is_signed
                                   ? relo.operands[1].imm.value.s
                                   : relo.operands[1].imm.value.u);
-                assembler.pop(r15);
+                assembler.pop(r11);
               }}},
         {ZYDIS_MNEMONIC_LEA,
          {.size = sizeof(uintptr_t),
@@ -248,12 +248,12 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                  const RelocationInfo &relocation_info, bool has_data,
                  uintptr_t relocation_data, asmjit::x86::Assembler &assembler) {
                 auto relo_lea_target = trampoline_address + relocation_data;
-                assembler.push(r15);
-                assembler.mov(r15, qword_ptr(relo_lea_target));
+                assembler.push(r11);
+                assembler.mov(r11, qword_ptr(relo_lea_target));
                 assembler.addsd(
                     zydis_xmm_reg_to_asmjit(relo.operands[0].reg.value),
-                    qword_ptr(r15));
-                assembler.pop(r15);
+                    qword_ptr(r11));
+                assembler.pop(r11);
               }}},
         {ZYDIS_MNEMONIC_MOV,
          {.size = kReloMovSize,
@@ -265,10 +265,10 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                  const RelocationInfo &relocation_info, bool has_data,
                  uintptr_t relocation_data, asmjit::x86::Assembler &assembler) {
                 auto relo_lea_target = trampoline_address + relocation_data;
-                assembler.push(r15);
-                assembler.mov(r15, qword_ptr(relo_lea_target));
-                assembler.mov(byte_ptr(r15), relo.operands[1].imm.value.s);
-                assembler.pop(r15);
+                assembler.push(r11);
+                assembler.mov(r11, qword_ptr(relo_lea_target));
+                assembler.mov(byte_ptr(r11), relo.operands[1].imm.value.s);
+                assembler.pop(r11);
               }}},
         {ZYDIS_MNEMONIC_MOVZX,
          {.size = kReloMovzxSize,
@@ -280,11 +280,11 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                  const RelocationInfo &relocation_info, bool has_data,
                  uintptr_t relocation_data, asmjit::x86::Assembler &assembler) {
                 auto relo_lea_target = trampoline_address + relocation_data;
-                assembler.push(r15);
-                assembler.mov(r15, qword_ptr(relo_lea_target));
+                assembler.push(r11);
+                assembler.mov(r11, qword_ptr(relo_lea_target));
                 assembler.mov(zydis_d_reg_to_asmjit(relo.operands[0].reg.value),
-                              byte_ptr(r15));
-                assembler.pop(r15);
+                              byte_ptr(r11));
+                assembler.pop(r11);
               }}}};
 
 } // namespace spud::detail::x64

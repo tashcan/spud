@@ -3,5 +3,5 @@
 .global spud_read_context_value
 .align	4
 spud_read_context_value:
-  mov rax, r15
+  mov rax, r11
   ret

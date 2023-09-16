@@ -330,7 +330,14 @@ std::vector<uint8_t> create_absolute_jump(uintptr_t target_address,
   code.init(Environment{asmjit::Arch::kX64});
   Assembler assembler(&code);
 
-  assembler.mov(r15, data);
+  //assembler.int3();
+  //assembler.push(r14);
+  //assembler.mov(r14, data);
+  //assembler.mov(qword_ptr(r14), r15);
+  //assembler.mov(r15, r14);
+  //assembler.pop(r14);
+
+  assembler.mov(r11, data);
   assembler.jmp(ptr(rip, 0));
   assembler.embed(&target_address, sizeof(target_address));
 
