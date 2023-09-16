@@ -6,6 +6,7 @@
 #include <tuple>
 #include <type_traits>
 #include <vector>
+#include <source_location>
 
 #include "arch.h"
 #include "utils.h"
@@ -51,11 +52,13 @@ protected:
   struct ContextContainer {
     uintptr_t func;
     uintptr_t trampoline;
+    std::source_location location;
   };
 
-  detour(uintptr_t address, uintptr_t func, uintptr_t wrapper)
+  detour(uintptr_t address, uintptr_t func, uintptr_t wrapper,
+         const std::source_location location = std::source_location::current())
       : address_(address), func_(func), wrapper_(wrapper),
-        context_container_(std::make_unique<ContextContainer>()) {}
+        context_container_(std::make_unique<ContextContainer>()), location_(location) {}
 
   Self &install(Arch arch = Arch::kHost);
   void remove();
@@ -79,6 +82,7 @@ private:
   std::unique_ptr<struct ContextContainer> context_container_ = nullptr;
   uintptr_t trampoline_ = 0;
   std::vector<uint8_t> original_func_data_ = {};
+  const std::source_location location_ = std::source_location::current();
 };
 
 template <typename T>
@@ -123,14 +127,19 @@ public:
   static R wrapper(Args... args) {
     const auto context = reinterpret_cast<ContextContainer *>(
         detail::detour::get_context_value());
+    printf("Running %s %s:%d\n", context->location.function_name(),
+           context->location.file_name(),
+           context->location.line());
     return ((func_t *)context->func)((trampoline_t *)context->trampoline,
                                      args...);
   };
   template <detail::Address T, detail::Address F>
-  static auto create(T target, F func) {
+  static auto create(
+      T target, F func,
+      const std::source_location location = std::source_location::current()) {
     return Self{reinterpret_cast<uintptr_t>(target),
                 reinterpret_cast<uintptr_t>(func),
-                reinterpret_cast<uintptr_t>((R(*)(Args...))wrapper)};
+                reinterpret_cast<uintptr_t>((R(*)(Args...))wrapper), location};
   }
 
   inline trampoline_t *trampoline() {
@@ -147,8 +156,9 @@ public:
   }
 
 private:
-  detour(uintptr_t address, uintptr_t func, uintptr_t wrapper)
-      : detail::detour(address, func, wrapper) {}
+  detour(uintptr_t address, uintptr_t func, uintptr_t wrapper,
+         const std::source_location location = std::source_location::current())
+      : detail::detour(address, func, wrapper, location) {}
 };
 
 template <typename R, typename... Args>
@@ -161,10 +171,9 @@ concept invocable = requires(F &&f, Args &&...args) {
 };
 
 template <typename F>
-inline auto create_detour(auto target,
-                          typename detail::function_traits<F>::FuncType func) {
-  return detour<typename detail::function_traits<F>::FuncType>::create(target,
-                                                                       func);
+inline auto create_detour(auto target, typename detail::function_traits<F>::FuncType func,
+    const std::source_location location = std::source_location::current()) {
+  return detour<typename detail::function_traits<F>::FuncType>::create(target, func, location);
 }
 
 #define SPUD_AUTO_HOOK(target, func)                                           \
