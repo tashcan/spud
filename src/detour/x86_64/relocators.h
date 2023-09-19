@@ -17,12 +17,11 @@ struct RelocationMeta {
   bool (*gen_relo_data)(std::span<uint8_t>, const RelocationEntry &,
                         asmjit::x86::Assembler &,
                         const RelocationInfo &relocation_info);
-  void (*gen_relo_code)(uintptr_t trampoline_address, std::span<uint8_t>, 
-                             const RelocationEntry &relo, 
-                             const RelocationInfo &relocation_info,
-                             bool has_data,
-                             uintptr_t relocation_data,
-                             asmjit::x86::Assembler &assembler);
+  void (*gen_relo_code)(uintptr_t trampoline_address, std::span<uint8_t>,
+                        const RelocationEntry &relo,
+                        const RelocationInfo &relocation_info, bool has_data,
+                        uintptr_t relocation_data,
+                        asmjit::x86::Assembler &assembler);
   bool copy_instruction = false;
 };
 

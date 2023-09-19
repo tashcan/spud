@@ -141,8 +141,8 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
 
     relocation_info.relocation_offset[decoder_offset] = relocation_offset;
 
-    if (needs_relocate(decoder_offset, extend_trampoline_to, jump_size,
-                                        inst, instruction.operands)) {
+    if (needs_relocate(decoder_offset, extend_trampoline_to, jump_size, inst,
+                       instruction.operands)) {
       auto &r_meta = relo_meta.at(instruction.info);
       relocation_offset += r_meta.expand;
 
@@ -166,10 +166,11 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
   relocations.erase(
       std::remove_if(begin(relocations), end(relocations),
                      [&](auto &v) {
-                       return !(
-                           is_jump(v.instruction) ||
-                           needs_relocate(v.address, extend_trampoline_to - 1, jump_size,
-                                          v.instruction, v.operands.data()));
+                       return !(is_jump(v.instruction) ||
+                                needs_relocate(v.address,
+                                               extend_trampoline_to - 1,
+                                               jump_size, v.instruction,
+                                               v.operands.data()));
                      }),
       end(relocations));
 
@@ -311,8 +312,8 @@ static RelocationResult do_far_relocations(
 
     // Place the cursor at the end of the instruction
     copy_offset = relo.address + relo.instruction.length;
-    r_meta.gen_relo_code(trampoline_address, target, relo,
-                         relocation_info, did_generate_data,
+    r_meta.gen_relo_code(trampoline_address, target, relo, relocation_info,
+                         did_generate_data,
                          relocation_data[relocation_data_idx], assembler);
     ++relocation_data_idx;
   }
@@ -330,12 +331,12 @@ std::vector<uint8_t> create_absolute_jump(uintptr_t target_address,
   code.init(Environment{asmjit::Arch::kX64});
   Assembler assembler(&code);
 
-  //assembler.int3();
-  //assembler.push(r14);
-  //assembler.mov(r14, data);
-  //assembler.mov(qword_ptr(r14), r15);
-  //assembler.mov(r15, r14);
-  //assembler.pop(r14);
+  // assembler.int3();
+  // assembler.push(r14);
+  // assembler.mov(r14, data);
+  // assembler.mov(qword_ptr(r14), r15);
+  // assembler.mov(r15, r14);
+  // assembler.pop(r14);
 
   assembler.mov(r11, data);
   assembler.jmp(ptr(rip, 0));

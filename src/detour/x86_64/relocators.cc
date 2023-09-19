@@ -71,7 +71,6 @@ static void offset_target(auto size, auto target_code, auto target) {
   }
 }
 
-
 /* ZyanU64
 CalcAbsoluteAddressForRelocation(const RelocationEntry &relo,
                                  const RelocationInfo &relocation_info, ) {
@@ -103,7 +102,8 @@ CalcAbsoluteAddressForRelocation(const RelocationEntry &relo,
 }
 */
 
-bool write_absolute_address(auto target, auto &relo, auto &assembler, auto &relo_info) {
+bool write_absolute_address(auto target, auto &relo, auto &assembler,
+                            auto &relo_info) {
   auto target_start = reinterpret_cast<uintptr_t>(target.data());
   ZyanU64 absolute_target = 0;
   for (auto i = 0; i < relo.instruction.operand_count; ++i) {
@@ -145,7 +145,8 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                   }
                   return false;
                 } else {
-                  assert(false && "Failed to calculate absolute target jump address");
+                  assert(false &&
+                         "Failed to calculate absolute target jump address");
                 }
                 return false;
               },
@@ -157,22 +158,23 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                 auto *code = assembler.code();
                 auto *code_data = code->textSection()->data();
 
-                const auto data_offset = relo.instruction.raw.imm[0].size > 0
-                    ? relo.instruction.raw.imm[0].offset
-                    : relo.instruction.raw.disp.offset;
+                const auto data_offset =
+                    relo.instruction.raw.imm[0].size > 0
+                        ? relo.instruction.raw.imm[0].offset
+                        : relo.instruction.raw.disp.offset;
                 const auto data_size = relo.instruction.raw.imm[0].size > 0
-                                       ? relo.instruction.raw.imm[0].size
+                                           ? relo.instruction.raw.imm[0].size
                                            : relo.instruction.raw.disp.size;
 
-                auto target_code = reinterpret_cast<uint8_t *>(code_data +
-                    assembler.code()->textSection()->bufferSize() - relo.instruction.length + data_offset);
+                auto target_code = reinterpret_cast<uint8_t *>(
+                    code_data + assembler.code()->textSection()->bufferSize() -
+                    relo.instruction.length + data_offset);
 
                 if (has_data) {
-                    const auto jump_target =
-                        relocation_data -
+                  const auto jump_target =
+                      relocation_data -
                       assembler.code()->textSection()->bufferSize();
-                  write_adjusted_target(data_size,
-                                        target_code, jump_target);
+                  write_adjusted_target(data_size, target_code, jump_target);
                 } else {
                   auto target_start =
                       reinterpret_cast<uintptr_t>(target.data());
@@ -201,7 +203,6 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                                   offset - preceeding_relo_offset);
                   }
                 }
-
               },
           .copy_instruction = true}},
         {ZYDIS_MNEMONIC_CMP,
@@ -213,7 +214,8 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                  const RelocationEntry &relo,
                  const RelocationInfo &relocation_info, bool has_data,
                  uintptr_t relocation_data, asmjit::x86::Assembler &assembler) {
-                const auto relo_lea_target = trampoline_address + relocation_data;
+                const auto relo_lea_target =
+                    trampoline_address + relocation_data;
                 assembler.push(r11);
                 assembler.mov(r11, qword_ptr(relo_lea_target));
                 assembler.cmp(byte_ptr(r11),
@@ -233,11 +235,10 @@ const std::unordered_map<ReloInstruction, RelocationMeta, ReloInstructionHasher>
                  uintptr_t relocation_data, asmjit::x86::Assembler &assembler) {
                 auto *code = assembler.code();
                 auto *code_data = code->textSection()->data();
-                assembler.mov(
-                    zydis_q_reg_to_asmjit(relo.operands[0].reg.value),
+                assembler.mov(zydis_q_reg_to_asmjit(relo.operands[0].reg.value),
                               qword_ptr(trampoline_address + relocation_data));
               },
-.copy_instruction = false}},
+          .copy_instruction = false}},
         {ZYDIS_MNEMONIC_ADDSD,
          {.size = kReloAddsdSize,
           .expand = kReloAddsdExpandSize,

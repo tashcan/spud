@@ -2,11 +2,14 @@
 
 #include <concepts>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <tuple>
 #include <type_traits>
 #include <vector>
+#if __cpp_lib_source_location
 #include <source_location>
+#endif
 
 #include "arch.h"
 #include "utils.h"
@@ -53,14 +56,22 @@ protected:
     uintptr_t r15;
     uintptr_t func;
     uintptr_t trampoline;
+#if __cpp_lib_source_location
     std::source_location location;
+#endif
   };
 
+#if __cpp_lib_source_location
   detour(uintptr_t address, uintptr_t func, uintptr_t wrapper,
          const std::source_location location = std::source_location::current())
       : address_(address), func_(func), wrapper_(wrapper),
-        context_container_(std::make_unique<ContextContainer>()), location_(location) {}
-
+        context_container_(std::make_unique<ContextContainer>()),
+        location_(location) {}
+#else
+  detour(uintptr_t address, uintptr_t func, uintptr_t wrapper)
+      : address_(address), func_(func), wrapper_(wrapper),
+        context_container_(std::make_unique<ContextContainer>()) {}
+#endif
   Self &install(Arch arch = Arch::kHost);
   void remove();
   Self &detach() {
@@ -83,7 +94,9 @@ private:
   std::unique_ptr<struct ContextContainer> context_container_ = nullptr;
   uintptr_t trampoline_ = 0;
   std::vector<uint8_t> original_func_data_ = {};
+#if __cpp_lib_source_location
   const std::source_location location_ = std::source_location::current();
+#endif
 };
 
 template <typename T>
@@ -128,12 +141,10 @@ public:
   static R wrapper(Args... args) {
     const auto context = reinterpret_cast<ContextContainer *>(
         detail::detour::get_context_value());
-    printf("Running %s %s:%d\n", context->location.function_name(),
-           context->location.file_name(),
-           context->location.line());
     return ((func_t *)context->func)((trampoline_t *)context->trampoline,
                                      args...);
   };
+#if __cpp_lib_source_location
   template <detail::Address T, detail::Address F>
   static auto create(
       T target, F func,
@@ -142,6 +153,14 @@ public:
                 reinterpret_cast<uintptr_t>(func),
                 reinterpret_cast<uintptr_t>((R(*)(Args...))wrapper), location};
   }
+#else
+  template <detail::Address T, detail::Address F>
+  static auto create(T target, F func) {
+    return Self{reinterpret_cast<uintptr_t>(target),
+                reinterpret_cast<uintptr_t>(func),
+                reinterpret_cast<uintptr_t>((R(*)(Args...))wrapper)};
+  }
+#endif
 
   inline trampoline_t *trampoline() {
     return reinterpret_cast<trampoline_t *>(this->detail::detour::trampoline());
@@ -157,9 +176,15 @@ public:
   }
 
 private:
+#if __cpp_lib_source_location
   detour(uintptr_t address, uintptr_t func, uintptr_t wrapper,
          const std::source_location location = std::source_location::current())
       : detail::detour(address, func, wrapper, location) {}
+#else
+  detour(uintptr_t address, uintptr_t func, uintptr_t wrapper)
+      : detail::detour(address, func, wrapper) {}
+
+#endif
 };
 
 template <typename R, typename... Args>
@@ -171,12 +196,22 @@ concept invocable = requires(F &&f, Args &&...args) {
   std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
 };
 
+#if __cpp_lib_source_location
 template <typename F>
-inline auto create_detour(auto target, typename detail::function_traits<F>::FuncType func,
+inline auto create_detour(
+    auto target, typename detail::function_traits<F>::FuncType func,
     const std::source_location location = std::source_location::current()) {
-  return detour<typename detail::function_traits<F>::FuncType>::create(target, func, location);
+  return detour<typename detail::function_traits<F>::FuncType>::create(
+      target, func, location);
 }
-
+#else
+template <typename F>
+inline auto create_detour(auto target,
+                          typename detail::function_traits<F>::FuncType func) {
+  return detour<typename detail::function_traits<F>::FuncType>::create(target,
+                                                                       func);
+}
+#endif
 #define SPUD_AUTO_HOOK(target, func)                                           \
   spud::create_detour<decltype(&func<void (*)(...)>)>(target, &func)
 
