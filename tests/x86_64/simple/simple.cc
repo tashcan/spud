@@ -48,7 +48,6 @@ TEST_CASE("Simple Hook with a condition asm and removal", "[simple]") {
   {
     auto t = SPUD_AUTO_HOOK(mov1, hook_mov1);
     t.install();
-    t.trampoline();
     mov1();
     REQUIRE(msg == false);
   }
@@ -72,7 +71,6 @@ TEST_CASE("Simple Hook with a condition asm mov jump within trampoline",
   hook_ran = false;
   auto t = SPUD_AUTO_HOOK(mov2, hook);
   t.install();
-  t.trampoline();
   mov2(1);
   REQUIRE(hook_ran == true);
   REQUIRE(msg2 == true);
@@ -82,7 +80,6 @@ TEST_CASE("Simple Hook with a condition 3", "[simple]") {
   hook_ran = false;
   auto t = SPUD_AUTO_HOOK(mov3, hook);
   t.install();
-  t.trampoline();
   mov3(1);
   REQUIRE(hook_ran == true);
   REQUIRE(msg3 == true);
@@ -93,7 +90,6 @@ TEST_CASE("Simple Hook with a condition asm mov jump within trampoline 2",
   hook_ran = false;
   auto t = SPUD_AUTO_HOOK(mov4, hook);
   t.install();
-  t.trampoline();
   mov4(0);
   REQUIRE(hook_ran == true);
   REQUIRE(msg4 == true);
@@ -102,9 +98,7 @@ TEST_CASE("Simple Hook with a condition asm mov jump within trampoline 2",
 TEST_CASE("Simple Hook with a condition asm mov jump within trampoline 3",
           "[simple]") {
   hook_ran = false;
-  auto t = SPUD_AUTO_HOOK(mov5, hook);
-  t.install();
-  t.trampoline();
+  SPUD_STATIC_DETOUR(mov5, hook);
   mov5(0);
   REQUIRE(hook_ran == true);
   REQUIRE(msg5 == true);

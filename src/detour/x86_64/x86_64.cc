@@ -143,16 +143,18 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
 
     if (needs_relocate(decoder_offset, extend_trampoline_to, jump_size, inst,
                        instruction.operands)) {
-      auto &r_meta = relo_meta.at(instruction.info);
-      relocation_offset += r_meta.expand;
-
-      relocations.emplace_back(RelocationEntry{
+      auto entry = RelocationEntry{
           decoder_offset, inst,
           std::array{instruction.operands[0], instruction.operands[1],
                      instruction.operands[2], instruction.operands[3],
                      instruction.operands[4], instruction.operands[5],
                      instruction.operands[6], instruction.operands[7],
-                     instruction.operands[8], instruction.operands[9]}});
+                     instruction.operands[8], instruction.operands[9]}};
+
+      auto &r_meta = relo_meta.at(entry.instruction);
+      relocation_offset += r_meta.expand(entry);
+
+      relocations.emplace_back(entry);
       extend_trampoline_to =
           std::max(decoder_offset + inst.length, extend_trampoline_to);
     } else if (extend_trampoline_to < jump_size) {
@@ -279,7 +281,7 @@ static RelocationResult do_far_relocations(
     const auto &relo = std::get<x64::RelocationEntry>(relocation);
     const auto &r_meta = relo_meta.at(relo.instruction);
 
-    relocation_data_offset += r_meta.expand;
+    relocation_data_offset += r_meta.expand(relo);
   }
 
   CodeHolder reloc_code;

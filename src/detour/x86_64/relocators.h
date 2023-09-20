@@ -13,7 +13,7 @@ namespace spud::detail::x64 {
 
 struct RelocationMeta {
   uintptr_t size;
-  uintptr_t expand;
+  uintptr_t (*expand)(const RelocationEntry &);
   bool (*gen_relo_data)(std::span<uint8_t>, const RelocationEntry &,
                         asmjit::x86::Assembler &,
                         const RelocationInfo &relocation_info);

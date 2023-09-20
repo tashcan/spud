@@ -7,7 +7,7 @@
 #include <tuple>
 #include <type_traits>
 #include <vector>
-#if __cpp_lib_source_location
+#if __cpp_lib_source_location && SPUD_DETOUR_TRACING
 #include <source_location>
 #endif
 
@@ -40,7 +40,7 @@ public:
     other.original_func_data_.clear();
   }
 
-  detour &operator=(detour &&other) {
+  detour &operator=(detour &&other) noexcept {
     this->trampoline_ = other.trampoline_;
     this->address_ = other.address_;
     this->func_ = other.func_;
@@ -56,12 +56,12 @@ protected:
     uintptr_t r15;
     uintptr_t func;
     uintptr_t trampoline;
-#if __cpp_lib_source_location
+#if __cpp_lib_source_location && SPUD_DETOUR_TRACING
     std::source_location location;
 #endif
   };
 
-#if __cpp_lib_source_location
+#if __cpp_lib_source_location && SPUD_DETOUR_TRACING
   detour(uintptr_t address, uintptr_t func, uintptr_t wrapper,
          const std::source_location location = std::source_location::current())
       : address_(address), func_(func), wrapper_(wrapper),
@@ -94,15 +94,15 @@ private:
   std::unique_ptr<struct ContextContainer> context_container_ = nullptr;
   uintptr_t trampoline_ = 0;
   std::vector<uint8_t> original_func_data_ = {};
-#if __cpp_lib_source_location
+#if __cpp_lib_source_location && SPUD_DETOUR_TRACING
   const std::source_location location_ = std::source_location::current();
 #endif
 };
 
 template <typename T>
 concept Address = requires(T a) {
-  { a } -> std::convertible_to<std::uintptr_t>;
-} || std::is_pointer_v<T>;
+                    { a } -> std::convertible_to<std::uintptr_t>;
+                  } || std::is_pointer_v<T>;
 
 template <typename> struct function_traits;
 
@@ -144,7 +144,7 @@ public:
     return ((func_t *)context->func)((trampoline_t *)context->trampoline,
                                      args...);
   };
-#if __cpp_lib_source_location
+#if __cpp_lib_source_location && SPUD_DETOUR_TRACING
   template <detail::Address T, detail::Address F>
   static auto create(
       T target, F func,
@@ -176,7 +176,7 @@ public:
   }
 
 private:
-#if __cpp_lib_source_location
+#if __cpp_lib_source_location && SPUD_DETOUR_TRACING
   detour(uintptr_t address, uintptr_t func, uintptr_t wrapper,
          const std::source_location location = std::source_location::current())
       : detail::detour(address, func, wrapper, location) {}
@@ -192,11 +192,12 @@ struct detour<R (*)(R (*)(Args...), Args...)>
     : public detour<R(R (*)(Args...), Args...)> {};
 
 template <class F, class... Args>
-concept invocable = requires(F &&f, Args &&...args) {
-  std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
-};
+concept invocable =
+    requires(F &&f, Args &&...args) {
+      std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+    };
 
-#if __cpp_lib_source_location
+#if __cpp_lib_source_location && SPUD_DETOUR_TRACING
 template <typename F>
 inline auto create_detour(
     auto target, typename detail::function_traits<F>::FuncType func,
@@ -219,4 +220,7 @@ inline auto create_detour(auto target,
 
 // Creates a detour that will live until the end of the program
 #define SPUD_STATIC_DETOUR(addr, fn)                                           \
-  (SPUD_AUTO_HOOK(addr, fn).install().detach().trampoline())
+  (([=]() -> auto{                                                             \
+    static auto dh_static_hook = SPUD_AUTO_HOOK(addr, fn);                     \
+    return dh_static_hook.install().trampoline();                              \
+  })())
