@@ -1,5 +1,13 @@
 
 <p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/tashcan/spud/main/assets/img/logo-dark.svg" width="400px">
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/tashcan/spud/main/assets/img/logo-light.svg" width="400px">
+    <img alt="spud logo" src="https://raw.githubusercontent.com/tashcan/spud/main/assets/img/logo-dark.svg" width="400px">
+  </picture>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT">
   <a href="https://github.com/tashcan/spud/actions"><img src="https://github.com/tashcan/spud/actions/workflows/build-and-test.yaml/badge.svg" alt="GitHub Actions"></a>
 </p>
