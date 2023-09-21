@@ -152,6 +152,7 @@ asmjit::x86::Gp zydis_reg_to_asmjit(ZydisRegister reg) {
   default:
     assert(false && "Unhandled register");
   }
+  return rax;
 }
 
 asmjit::x86::Xmm zydis_xmm_reg_to_asmjit(ZydisRegister reg) {
@@ -225,6 +226,7 @@ asmjit::x86::Xmm zydis_xmm_reg_to_asmjit(ZydisRegister reg) {
   default:
     assert(false && "Unhandled register");
   }
+  return xmm0;
 }
 
 auto zydis_ymm_reg_to_asmjit(ZydisRegister reg) {
@@ -298,6 +300,7 @@ auto zydis_ymm_reg_to_asmjit(ZydisRegister reg) {
   default:
     assert(false && "Unhandled register");
   }
+  return ymm0;
 }
 
 auto zydis_zmm_reg_to_asmjit(ZydisRegister reg) {
@@ -371,5 +374,6 @@ auto zydis_zmm_reg_to_asmjit(ZydisRegister reg) {
   default:
     assert(false && "Unhandled register");
   }
+  return zmm0;
 }
 } // namespace spud

@@ -94,7 +94,9 @@ detail::detour &detour::install(Arch arch) {
 
   context_container_->func = func_;
   context_container_->trampoline = trampoline_;
-  // context_container_->location = location_;
+#if __cpp_lib_source_location && SPUD_DETOUR_TRACING
+  context_container_->location = location_;
+#endif
 
   {
     const auto copy_size = required_trampoline_size;
