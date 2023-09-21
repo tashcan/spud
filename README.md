@@ -35,13 +35,20 @@ target_link_libraries(your-project-name PRIVATE spud)
 
 -  Simple example
 ```c++
+void hook(auto original, int n) {
+  if (n == 0) {
+    // Run some custom code here
+    return;
+  }
+  // Forward to the original code
+  return original(n);
+}
+
 void test_function(auto original, int n) {
-    if (n == 0) {
-      // Run some custom code here
-      return;
-    }
-    // Forward to the original code
-    return original(n);
+  if (n == 0) {
+    printf("N was 0\n");
+  }
+  printf("%d\n", n);
 }
 
 SPUD_STATIC_DETOUR(test_function, hook);
