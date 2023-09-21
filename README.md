@@ -1,5 +1,13 @@
 
 <p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/tashcan/spud/main/assets/img/logo-dark.svg" width="400px">
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/tashcan/spud/main/assets/img/logo-light.svg" width="400px">
+    <img alt="spud logo" src="https://raw.githubusercontent.com/tashcan/spud/main/assets/img/logo-dark.svg" width="400px">
+  </picture>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT">
   <a href="https://github.com/tashcan/spud/actions"><img src="https://github.com/tashcan/spud/actions/workflows/build-and-test.yaml/badge.svg" alt="GitHub Actions"></a>
 </p>
@@ -27,22 +35,30 @@ target_link_libraries(your-project-name PRIVATE spud)
 
 -  Simple example
 ```c++
-void test_function(int n);
-decltype(test_function) *o_test_function = nullptr;
-
-SPUD_NO_INLINE void test_function(int n) {
+void test_function(auto original, int n) {
     if (n == 0) {
-        condition_intact_for_hook = true;
-        return;
+      // Run some custom code here
+      return;
     }
+    // Forward to the original code
+    return original(n);
 }
 
-o_test_function = SPUD_STATIC_DETOUR(test_function, hook);
+SPUD_STATIC_DETOUR(test_function, hook);
 ```
 
-### Build & Install
+## Build & Install
 
 `spud` can be easily added to any cmake-based project. Just add a few lines in `CMakeLists.txt`.
+
+```cmake
+FetchContent_Declare(
+      spud
+      GIT_REPOSITORY "https://github.com/tashcan/spud.git"
+      GIT_TAG origin/main
+)
+FetchContent_MakeAvailable(spud)
+```
 
 ## Missing features
 
@@ -53,6 +69,8 @@ o_test_function = SPUD_STATIC_DETOUR(test_function, hook);
 ## References
 
 - [catch2](https://github.com/catchorg/Catch2) for unit-testing
+- [asmjit](https://github.com/asmjit/asmjit) for code-gen on x86 and arm
+- [zydis](https://github.com/zyantific/zydis) for disassembling x86 code
 - [x86](http://ref.x86asm.net/coder32.html) and [x86-64](http://ref.x86asm.net/coder64.html) opcode and instruction reference
 
 ## License

@@ -22,7 +22,8 @@ namespace arm64 {
 
 constexpr auto kAbsoluteJumpSize = 16;
 
-std::vector<uint8_t> create_absolute_jump(uintptr_t target_address) {
+std::vector<uint8_t> create_absolute_jump(uintptr_t target_address,
+                                          uintptr_t data) {
   using namespace asmjit;
   using namespace asmjit::a64;
 
