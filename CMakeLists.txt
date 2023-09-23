@@ -9,6 +9,7 @@ endif(WIN32)
 SET(CMAKE_ASM_FLAGS "${CFLAGS} -x assembler-with-cpp")
 
 include(CTest)
+include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CXX_STANDARD_REQUIRED ON)
@@ -16,15 +17,33 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(ASMJIT_STATIC TRUE)
 
 if (NOT TARGET Zydis)
-add_subdirectory("third_party/zydis")
+FetchContent_Declare(
+  zydis
+  GIT_REPOSITORY https://github.com/zyantific/zydis.git
+  GIT_TAG        v4.0.0
+)
+
+FetchContent_MakeAvailable(zydis)
 endif()
 
 if (NOT TARGET asmjit)
-add_subdirectory("third_party/asmjit")
+FetchContent_Declare(
+  asmjit
+  GIT_REPOSITORY https://github.com/asmjit/asmjit.git
+  GIT_TAG        origin/master 
+)
+
+FetchContent_MakeAvailable(asmjit)
 endif()
 
 if (NOT TARGET Catch2)
-add_subdirectory("third_party/Catch2")
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.0.1
+)
+
+FetchContent_MakeAvailable(Catch2)
 endif()
 
 add_library("spud" STATIC)
