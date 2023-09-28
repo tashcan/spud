@@ -52,11 +52,11 @@ target_link_libraries("spud" PRIVATE "asmjit")
 add_dependencies("spud" "Zydis" "asmjit")
 
 target_sources("spud"
-	PUBLIC
+    PUBLIC
     "include/spud/arch.h"
-	"include/spud/detour.h"
+    "include/spud/detour.h"
     "include/spud/utils.h"
-	"include/spud/memory/protection.h"
+    "include/spud/memory/protection.h"
 )
 
 target_include_directories("spud" PUBLIC "include" PRIVATE "src")
@@ -112,25 +112,24 @@ endif()
 
 endif(WIN32)
 target_sources("spud"
-	PRIVATE
-	"src/utils.cc"
-	"src/zydis_utils.cc"
-	"src/zydis_utils.h"
-	"src/detour/x86_64/x86_64.cc"
-	"src/detour/x86_64/x86_64.h"
+    PRIVATE
+    "src/utils.cc"
+    "src/zydis_utils.cc"
+    "src/zydis_utils.h"
+    "src/detour/x86_64/x86_64.cc"
+    "src/detour/x86_64/x86_64.h"
     "src/detour/x86_64/relocators.cc"
     "src/detour/x86_64/relocators.h"
-	"src/detour/aarch64/aarch64.cc"
-	"src/detour/aarch64/aarch64.h"
+    "src/detour/aarch64/aarch64.cc"
+    "src/detour/aarch64/aarch64.h"
     "src/detour/detour.cc"
     "src/detour/detour_impl.h"
     "src/detour/fwd.h"
     "src/detour/remapper.cc"
-	"src/detour/remapper.h"
-	"src/memory/protection.cc"
+    "src/detour/remapper.h"
+    "src/memory/protection.cc"
     "${ASM_SRCS}"
 )
-
 
 if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
 
@@ -146,11 +145,19 @@ endif()
 
 endif(WIN32)
 
+file(GLOB_RECURSE BENCHMARK_SRCS benchmark/*.cc)
+
 add_executable("spud.test" ${TEST_SRCS} "tests/test_util.h")
 target_include_directories("spud.test" PRIVATE "tests")
 target_link_libraries("spud.test" PRIVATE "Catch2" "Catch2::Catch2WithMain" "spud")
 add_dependencies("spud.test" "Catch2" "spud")
 
+add_executable("spud.benchmark" ${BENCHMARK_SRCS})
+target_include_directories("spud.benchmark" PRIVATE "benchmark")
+target_link_libraries("spud.benchmark" PRIVATE "Catch2" "Catch2::Catch2WithMain" "spud")
+add_dependencies("spud.benchmark" "Catch2" "spud")
+
 add_test(NAME spud.test COMMAND spud.test)
+add_test(NAME spud.benchmark COMMAND spud.benchmark)
 
 endif()

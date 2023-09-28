@@ -1,0 +1,50 @@
+name: Bench
+on:
+  push:
+
+permissions:
+  deployments: write
+  contents: write
+
+job:
+  benchmark:
+    name: Detour check 
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+    
+      - name: Set reusable strings
+        id: strings
+        shell: bash
+        run: |
+          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+
+      - name: Configure CMake
+        run: >
+          cmake -B ${{ steps.strings.outputs.build-output-dir }}
+          -DCMAKE_CXX_COMPILER=clang++
+          -DCMAKE_C_COMPILER=clang
+          -DCMAKE_BUILD_TYPE=Release
+          -S ${{ github.workspace }}
+
+      - name: Build
+        run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config Release -j
+          
+      - name: Benchmark 
+        working-directory: ${{ steps.strings.outputs.build-output-dir }}
+        run: ctest -R spud.benchmark --build-config ${{ matrix.build_type }} --output-on-failure | tee ../benchmark_result.txt
+
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Detour Benchmark
+          tool: 'catch2'
+          output-file-path: examples/catch2/benchmark_result.txt
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          alert-threshold: '200%'
+          comment-on-alert: true
+          fail-on-alert: true
+

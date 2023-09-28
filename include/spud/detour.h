@@ -109,20 +109,46 @@ template <typename> struct function_traits;
 template <typename Function>
 struct function_traits
     : public function_traits<
-          decltype(&std::remove_reference<Function>::type::operator())> {};
+          decltype(&Function::template operator()<void (*)(...)>)> {};
 
-template <typename ClassType, typename ReturnType, typename... Arguments>
-struct function_traits<ReturnType (ClassType::*)(Arguments...) const>
-    : function_traits<ReturnType (*)(Arguments...)> {};
+template <typename ClassType, typename ReturnType, typename FirstArg,
+          typename... Arguments>
+struct function_traits<ReturnType (ClassType::*)(FirstArg, Arguments...) const>
+    : function_traits<ReturnType (*)(ReturnType (*)(Arguments...),
+                                     Arguments...)> {};
 
 /* support the non-const operator ()
  * this will work with user defined functors */
-template <typename ClassType, typename ReturnType, typename... Arguments>
-struct function_traits<ReturnType (ClassType::*)(Arguments...)>
-    : function_traits<ReturnType (*)(Arguments...)> {};
+template <typename ClassType, typename ReturnType, typename FirstArg,
+          typename... Arguments>
+struct function_traits<ReturnType (ClassType::*)(FirstArg, Arguments...)>
+    : function_traits<ReturnType (*)(ReturnType (*)(Arguments...),
+                                     Arguments...)> {};
 
 template <typename ReturnType, typename FirstArg, typename... Arguments>
 struct function_traits<ReturnType (*)(FirstArg, Arguments...)> {
+  using FuncType = ReturnType (*)(ReturnType (*)(Arguments...), Arguments...);
+};
+
+template <typename> struct function_traits_ptr;
+
+template <typename ClassType, typename ReturnType, typename FirstArg,
+          typename... Arguments>
+struct function_traits_ptr<ReturnType (ClassType::*)(FirstArg, Arguments...)
+                               const>
+    : function_traits_ptr<ReturnType (*)(ReturnType (*)(Arguments...),
+                                         Arguments...)> {};
+
+/* support the non-const operator ()
+ * this will work with user defined functors */
+template <typename ClassType, typename ReturnType, typename FirstArg,
+          typename... Arguments>
+struct function_traits_ptr<ReturnType (ClassType::*)(FirstArg, Arguments...)>
+    : function_traits_ptr<ReturnType (*)(ReturnType (*)(Arguments...),
+                                         Arguments...)> {};
+
+template <typename ReturnType, typename FirstArg, typename... Arguments>
+struct function_traits_ptr<ReturnType (*)(FirstArg, Arguments...)> {
   using FuncType = ReturnType (*)(ReturnType (*)(Arguments...), Arguments...);
 };
 
@@ -206,16 +232,32 @@ inline auto create_detour(
       target, func, location);
 }
 #else
-template <typename F>
-inline auto create_detour(auto target,
-                          typename detail::function_traits<F>::FuncType func) {
-  return detour<typename detail::function_traits<F>::FuncType>::create(target,
-                                                                       func);
+template <typename F> inline auto create_detour(auto target, F func) {
+  return detour<F>::create(target, func);
 }
 #endif
-#define SPUD_AUTO_HOOK(target, func)                                           \
-  spud::create_detour<decltype(&func<void (*)(...)>)>(target, &func)
 
+template <typename arg> struct Foo {
+  using FuncT = typename spud::detail::function_traits<arg>::FuncType;
+};
+
+template <typename F,
+          typename std::enable_if_t<!std::is_function_v<F>> * = nullptr>
+auto create_impl(auto target, F func) {
+  using FuncT = Foo<F>::FuncT;
+  return spud::create_detour<FuncT>(target, func);
+}
+
+template <typename F, typename std::enable_if_t<std::is_function_v<
+                          std::remove_pointer_t<F>>> * = nullptr>
+auto create_impl(auto target,
+                 typename detail::function_traits_ptr<F>::FuncType func) {
+  return spud::create_detour<typename detail::function_traits_ptr<F>::FuncType>(
+      target, func);
+}
+
+#define SPUD_AUTO_HOOK(target, func)                                           \
+  spud::create_impl<decltype(&func<void (*)(...)>)>(target, func);
 } // namespace spud
 
 // Creates a detour that will live until the end of the program
