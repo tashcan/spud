@@ -101,8 +101,8 @@ private:
 
 template <typename T>
 concept Address = requires(T a) {
-                    { a } -> std::convertible_to<std::uintptr_t>;
-                  } || std::is_pointer_v<T>;
+  { a } -> std::convertible_to<std::uintptr_t>;
+} || std::is_pointer_v<T>;
 
 template <typename> struct function_traits;
 
@@ -218,10 +218,9 @@ struct detour<R (*)(R (*)(Args...), Args...)>
     : public detour<R(R (*)(Args...), Args...)> {};
 
 template <class F, class... Args>
-concept invocable =
-    requires(F &&f, Args &&...args) {
-      std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
-    };
+concept invocable = requires(F &&f, Args &&...args) {
+  std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+};
 
 #if __cpp_lib_source_location && SPUD_DETOUR_TRACING
 template <typename F>
@@ -244,7 +243,7 @@ template <typename arg> struct Foo {
 template <typename F,
           typename std::enable_if_t<!std::is_function_v<F>> * = nullptr>
 auto create_impl(auto target, F func) {
-  using FuncT = Foo<F>::FuncT;
+  using FuncT = typename Foo<F>::FuncT;
   return spud::create_detour<FuncT>(target, func);
 }
 
@@ -262,7 +261,7 @@ auto create_impl(auto target,
 
 // Creates a detour that will live until the end of the program
 #define SPUD_STATIC_DETOUR(addr, fn)                                           \
-  (([=]() -> auto{                                                             \
+  (([=]() -> auto {                                                            \
     static auto dh_static_hook = SPUD_AUTO_HOOK(addr, fn);                     \
     return dh_static_hook.install().trampoline();                              \
   })())

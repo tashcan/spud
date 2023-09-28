@@ -1,12 +1,14 @@
 name: Bench
 on:
   push:
+    branches:
+      - main
 
 permissions:
   deployments: write
   contents: write
 
-job:
+jobs:
   benchmark:
     name: Detour check 
     runs-on: ubuntu-latest
@@ -34,14 +36,14 @@ job:
           
       - name: Benchmark 
         working-directory: ${{ steps.strings.outputs.build-output-dir }}
-        run: ctest -R spud.benchmark --build-config ${{ matrix.build_type }} --output-on-failure | tee ../benchmark_result.txt
+        run: ${{ steps.strings.outputs.build-output-dir }}/spud.benchmark | tee ${{ github.workspace }}/benchmark_result.txt
 
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Detour Benchmark
           tool: 'catch2'
-          output-file-path: examples/catch2/benchmark_result.txt
+          output-file-path: benchmark_result.txt
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
           alert-threshold: '200%'
