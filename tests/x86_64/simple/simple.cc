@@ -107,10 +107,11 @@ TEST_CASE("Simple Hook with a condition asm mov jump within trampoline 3",
 TEST_CASE("Simple Hook lambda", "[simple]") {
   hook_ran = false;
   msg4 = false;
-  spud::create_impl(mov4, [](auto original, int n) {
+  auto t = spud::create_impl(mov4, [](auto original, int n) {
     hook_ran = true;
     return original(n);
-  }).install();
+  });
+  t.install();
   mov4(0);
   REQUIRE(hook_ran == true);
   REQUIRE(msg4 == true);
