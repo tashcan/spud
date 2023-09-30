@@ -53,7 +53,9 @@ add_dependencies("spud" "Zydis" "asmjit")
 include(CheckIPOSupported)
 check_ipo_supported(RESULT lto_supported OUTPUT error)
 if(lto_supported)
-set_property(TARGET spud PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+if(NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    set_property(TARGET spud PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
 endif()
 
 target_sources("spud"
