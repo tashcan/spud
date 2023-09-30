@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1696036345038,
+  "lastUpdate": 1696076920979,
   "repoUrl": "https://github.com/tashcan/spud",
   "entries": {
     "Detour Benchmark": [
@@ -153,6 +153,37 @@ window.BENCHMARK_DATA = {
             "name": "test",
             "value": 12.743,
             "range": "± 1.21717",
+            "unit": "us",
+            "extra": "100 samples\n3 iterations"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "committer": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "distinct": true,
+          "id": "a8f1b714723a8238badf80348a73aca0a546480b",
+          "message": "Don't do LTO on clang",
+          "timestamp": "2023-09-30T05:26:48-07:00",
+          "tree_id": "28f7a69f7fb47e1ae23b150189caadcbcbcc6a66",
+          "url": "https://github.com/tashcan/spud/commit/a8f1b714723a8238badf80348a73aca0a546480b"
+        },
+        "date": 1696076920568,
+        "tool": "catch2",
+        "benches": [
+          {
+            "name": "test",
+            "value": 11.8243,
+            "range": "± 692.708",
             "unit": "us",
             "extra": "100 samples\n3 iterations"
           }
