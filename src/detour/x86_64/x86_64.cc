@@ -280,6 +280,7 @@ static RelocationResult do_far_relocations(
   using namespace asmjit::x86;
 
   std::vector<uintptr_t> relocation_data;
+  relocation_data.reserve(10);
 
   size_t relocation_data_offset = target.size() + 14;
 

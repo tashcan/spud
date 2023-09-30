@@ -236,14 +236,10 @@ template <typename F> inline auto create_detour(auto target, F func) {
 }
 #endif
 
-template <typename arg> struct Foo {
-  using FuncT = typename spud::detail::function_traits<arg>::FuncType;
-};
-
 template <typename F,
           typename std::enable_if_t<!std::is_function_v<F>> * = nullptr>
 auto create_impl(auto target, F func) {
-  using FuncT = typename Foo<F>::FuncT;
+  using FuncT = typename spud::detail::function_traits<F>::FuncType;
   return spud::create_detour<FuncT>(target, func);
 }
 
