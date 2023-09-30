@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1696035404231,
+  "lastUpdate": 1696036345038,
   "repoUrl": "https://github.com/tashcan/spud",
   "entries": {
     "Detour Benchmark": [
@@ -122,6 +122,37 @@ window.BENCHMARK_DATA = {
             "name": "test",
             "value": 11.8632,
             "range": "± 760.95",
+            "unit": "us",
+            "extra": "100 samples\n3 iterations"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "committer": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "distinct": true,
+          "id": "02474cdc54b0b99ce7218b721c907dc56b6c2e4e",
+          "message": "Remove Foo struct",
+          "timestamp": "2023-09-29T18:10:26-07:00",
+          "tree_id": "bbc34853f73056a8e54b268de7be841bd382617c",
+          "url": "https://github.com/tashcan/spud/commit/02474cdc54b0b99ce7218b721c907dc56b6c2e4e"
+        },
+        "date": 1696036344297,
+        "tool": "catch2",
+        "benches": [
+          {
+            "name": "test",
+            "value": 12.743,
+            "range": "± 1.21717",
             "unit": "us",
             "extra": "100 samples\n3 iterations"
           }
