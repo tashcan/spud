@@ -1,4 +1,5 @@
 #include "x86_64.h"
+#include "Zycore/Status.h"
 #include "Zycore/Types.h"
 #include "Zydis/DecoderTypes.h"
 #include "detour/detour_impl.h"
@@ -94,6 +95,22 @@ needs_relocate(uintptr_t decoder_offset, intptr_t code_end, intptr_t jump_size,
   return false;
 };
 
+static inline bool DecodeInstruction(const ZydisDecoder *decoder,
+                                     const void *buffer, ZyanUSize length,
+                                     ZydisDecodedInstruction *instruction,
+                                     ZydisDecodedOperand *operands) {
+  ZydisDecoderContext ctx;
+  if (ZYAN_FAILED(ZydisDecoderDecodeInstruction(decoder, &ctx, buffer, length,
+                                                instruction))) {
+    return false;
+  }
+  if (ZYAN_FAILED(ZydisDecoderDecodeOperands(
+          decoder, &ctx, instruction, operands, instruction->operand_count))) {
+    return false;
+  }
+  return true;
+}
+
 std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
                                                        size_t jump_size) {
   //
@@ -116,8 +133,7 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
   ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
   //
 
-  // ZydisDecodedInstruction instruction;
-  ZydisDisassembledInstruction instruction;
+  ZydisDecodedInstruction instruction;
   ZydisDecoderContext context;
   uintptr_t decoder_offset = 0;
   intptr_t decode_length = 0x40;
@@ -132,24 +148,22 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
 
   constexpr auto kRuntimeAddress = 0x0;
 
+  ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
   while (decode_length >= 0 &&
-         ZYAN_SUCCESS(ZydisDisassembleIntel(
-             ZYDIS_MACHINE_MODE_LONG_64, kRuntimeAddress,
-             reinterpret_cast<void *>(address + decoder_offset),
-             decode_length - decoder_offset, &instruction))) {
-    auto inst = instruction.info;
+         DecodeInstruction(
+             &decoder, reinterpret_cast<void *>(address + decoder_offset),
+             decode_length - decoder_offset, &instruction, operands)) {
+    auto inst = instruction;
 
     relocation_info.relocation_offset[decoder_offset] = relocation_offset;
 
     if (needs_relocate(decoder_offset, extend_trampoline_to, jump_size, inst,
-                       instruction.operands)) {
+                       operands)) {
       auto entry = RelocationEntry{
           decoder_offset, inst,
-          std::array{instruction.operands[0], instruction.operands[1],
-                     instruction.operands[2], instruction.operands[3],
-                     instruction.operands[4], instruction.operands[5],
-                     instruction.operands[6], instruction.operands[7],
-                     instruction.operands[8], instruction.operands[9]}};
+          std::array{operands[0], operands[1], operands[2], operands[3],
+                     operands[4], operands[5], operands[6], operands[7],
+                     operands[8], operands[9]}};
 
       auto &r_meta = relo_meta.at(entry.instruction);
       relocation_offset += r_meta.expand(entry);
@@ -183,7 +197,7 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
 
     ZyanU64 result;
     constexpr auto kRuntimeAddress = 0x7700000000;
-    ZydisCalcAbsoluteAddress(&instruction.info, &relocation.operands[0],
+    ZydisCalcAbsoluteAddress(&instruction, &relocation.operands[0],
                              kRuntimeAddress + decoder_offset, &result);
 
     const auto jump_in_trampoline =
