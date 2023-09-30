@@ -5,7 +5,6 @@ project(spud C CXX ASM_MASM)
 else()
 project(spud C CXX ASM)
 endif(WIN32)
-
 SET(CMAKE_ASM_FLAGS "${CFLAGS} -x assembler-with-cpp")
 
 include(CTest)
@@ -13,7 +12,7 @@ include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CXX_STANDARD_REQUIRED ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 set(ASMJIT_STATIC TRUE)
 
 if (NOT TARGET Zydis)
@@ -50,6 +49,12 @@ add_library("spud" STATIC)
 target_link_libraries("spud" PRIVATE "Zydis")
 target_link_libraries("spud" PRIVATE "asmjit")
 add_dependencies("spud" "Zydis" "asmjit")
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT lto_supported OUTPUT error)
+if(lto_supported)
+set_property(TARGET spud PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
 
 target_sources("spud"
     PUBLIC

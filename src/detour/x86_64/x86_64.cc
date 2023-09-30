@@ -153,32 +153,32 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
          DecodeInstruction(
              &decoder, reinterpret_cast<void *>(address + decoder_offset),
              decode_length - decoder_offset, &instruction, operands)) {
-    auto inst = instruction;
-
     relocation_info.relocation_offset[decoder_offset] = relocation_offset;
 
-    if (needs_relocate(decoder_offset, extend_trampoline_to, jump_size, inst,
-                       operands)) {
+    if (needs_relocate(decoder_offset, extend_trampoline_to, jump_size,
+                       instruction, operands)) {
       auto entry = RelocationEntry{
-          decoder_offset, inst,
+          decoder_offset, instruction,
           std::array{operands[0], operands[1], operands[2], operands[3],
                      operands[4], operands[5], operands[6], operands[7],
                      operands[8], operands[9]}};
 
-      auto &r_meta = relo_meta.at(entry.instruction);
+      const auto &r_meta = relo_meta.at(entry.instruction);
       relocation_offset += r_meta.expand(entry);
 
       relocations.emplace_back(entry);
       extend_trampoline_to =
-          std::max(decoder_offset + inst.length, extend_trampoline_to);
+          std::max(decoder_offset + instruction.length, extend_trampoline_to);
     } else if (extend_trampoline_to < jump_size) {
       extend_trampoline_to =
-          std::max(decoder_offset + inst.length, extend_trampoline_to);
+          std::max(decoder_offset + instruction.length, extend_trampoline_to);
     }
 
-    decoder_offset += inst.length;
+    decoder_offset += instruction.length;
   }
 
+  // Remove everything that doesn't actually end up needing relocations after we
+  // have determined the total trampoline size
   relocations.erase(
       std::remove_if(begin(relocations), end(relocations),
                      [&](auto &v) {
