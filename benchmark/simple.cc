@@ -39,8 +39,8 @@ void hook(auto original, int n) {
 }
 
 TEST_CASE("bench simple install", "[benchmark]") {
-  BENCHMARK("test") {
+  BENCHMARK_ADVANCED("test")(Catch::Benchmark::Chronometer meter) {
     auto t = SPUD_AUTO_HOOK(test_function, hook);
-    t.install();
+    meter.measure([&] { t.install(); });
   };
 }
