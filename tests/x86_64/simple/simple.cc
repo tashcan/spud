@@ -107,7 +107,7 @@ TEST_CASE("Simple Hook with a condition asm mov jump within trampoline 3",
 TEST_CASE("Simple Hook lambda", "[simple]") {
   hook_ran = false;
   msg4 = false;
-  auto t = spud::create_impl(mov4, [](auto original, int n) {
+  auto t = spud::create_detour(mov4, [](auto original, int n) {
     hook_ran = true;
     return original(n);
   });
