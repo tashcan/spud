@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1696076920979,
+  "lastUpdate": 1696278063115,
   "repoUrl": "https://github.com/tashcan/spud",
   "entries": {
     "Detour Benchmark": [
@@ -184,6 +184,37 @@ window.BENCHMARK_DATA = {
             "name": "test",
             "value": 11.8243,
             "range": "± 692.708",
+            "unit": "us",
+            "extra": "100 samples\n3 iterations"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "committer": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "distinct": true,
+          "id": "72b28b70894790fd1bcc8c909dfd1881b023c54a",
+          "message": "Add missing header",
+          "timestamp": "2023-10-02T13:09:20-07:00",
+          "tree_id": "44153d588271257d7eeec44a5ce21bb8ec00b928",
+          "url": "https://github.com/tashcan/spud/commit/72b28b70894790fd1bcc8c909dfd1881b023c54a"
+        },
+        "date": 1696278062677,
+        "tool": "catch2",
+        "benches": [
+          {
+            "name": "test",
+            "value": 12.0168,
+            "range": "± 886.091",
             "unit": "us",
             "extra": "100 samples\n3 iterations"
           }
