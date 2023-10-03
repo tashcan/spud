@@ -38,6 +38,13 @@ static void hook(auto original, int n) {
   original(0);
 }
 
+/* int main() {
+  for (int i = 0; i < 1000000; ++i) {
+    auto t = SPUD_AUTO_HOOK(test_function, hook);
+    t.install();
+  }
+} */
+
 TEST_CASE("simple test", "[benchmark]") {
   BENCHMARK_ADVANCED("test")(Catch::Benchmark::Chronometer meter) {
     auto t = SPUD_AUTO_HOOK(test_function, hook);

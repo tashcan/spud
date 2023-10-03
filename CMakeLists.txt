@@ -125,6 +125,7 @@ target_sources("spud"
     "src/detour/remapper.cc"
     "src/detour/remapper.h"
     "src/memory/protection.cc"
+    "src/pattern/pattern.cc"
     "${ASM_SRCS}"
 )
 
@@ -173,7 +174,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(minhook)
 endif()
 
-add_executable("spud.test" ${TEST_SRCS} "tests/test_util.h")
+add_executable("spud.test" ${TEST_SRCS} "tests/test_util.h" "tests/pattern.cc")
 target_include_directories("spud.test" PRIVATE "tests")
 target_link_libraries("spud.test" PRIVATE "Catch2" "Catch2::Catch2WithMain" "spud")
 add_dependencies("spud.test" "Catch2" "spud")
