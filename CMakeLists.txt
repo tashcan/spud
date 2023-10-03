@@ -35,16 +35,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(asmjit)
 endif()
 
-if (NOT TARGET Catch2)
-FetchContent_Declare(
-  Catch2
-  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        v3.0.1
-)
-
-FetchContent_MakeAvailable(Catch2)
-endif()
-
 add_library("spud" STATIC)
 target_link_libraries("spud" PRIVATE "Zydis")
 target_link_libraries("spud" PRIVATE "asmjit")
@@ -138,7 +128,7 @@ target_sources("spud"
     "${ASM_SRCS}"
 )
 
-if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
 if (WIN32)
 file(GLOB_RECURSE TEST_SRCS tests/x86_64/*.cc tests/x86_64/*.h tests/x86_64/*.asm)
@@ -154,6 +144,35 @@ endif(WIN32)
 
 file(GLOB_RECURSE BENCHMARK_SRCS benchmark/*.cc)
 
+if (NOT TARGET Catch2)
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.0.1
+)
+
+FetchContent_MakeAvailable(Catch2)
+endif()
+
+if (COMPARE_LIBS)
+
+add_compile_definitions("SPUD_COMPARE_LIBS=1")
+
+FetchContent_Declare(
+    lime
+    GIT_REPOSITORY "https://github.com/Curve/lime"
+)
+
+FetchContent_MakeAvailable(lime)
+
+FetchContent_Declare(
+    minhook
+    GIT_REPOSITORY "https://github.com/TsudaKageyu/minhook"
+)
+
+FetchContent_MakeAvailable(minhook)
+endif()
+
 add_executable("spud.test" ${TEST_SRCS} "tests/test_util.h")
 target_include_directories("spud.test" PRIVATE "tests")
 target_link_libraries("spud.test" PRIVATE "Catch2" "Catch2::Catch2WithMain" "spud")
@@ -161,7 +180,11 @@ add_dependencies("spud.test" "Catch2" "spud")
 
 add_executable("spud.benchmark" ${BENCHMARK_SRCS})
 target_include_directories("spud.benchmark" PRIVATE "benchmark")
+if (COMPARE_LIBS)
+target_link_libraries("spud.benchmark" PRIVATE "Catch2" "Catch2::Catch2WithMain" "spud" "lime" "minhook")
+else()
 target_link_libraries("spud.benchmark" PRIVATE "Catch2" "Catch2::Catch2WithMain" "spud")
+endif()
 add_dependencies("spud.benchmark" "Catch2" "spud")
 
 add_test(NAME spud.test COMMAND spud.test)
