@@ -8,6 +8,14 @@
 #include <vector>
 
 namespace spud {
+
+enum cpu_feature : uint32_t {
+  FEATURE_SSE42 = 1 << 1,
+  FEATURE_AVX2 = 1 << 2,
+
+  FEATURE_ALL = FEATURE_SSE42 | FEATURE_AVX2
+};
+
 namespace detail {
 
 struct PatternResult {
@@ -17,9 +25,10 @@ struct PatternResult {
 
 void generate_mask_and_data(std::string_view pattern, std::string &mask,
                             std::string &data);
-std::vector<PatternResult> find_matches(std::string_view mask,
-                                        std::string_view data,
-                                        std::span<uint8_t> search_buffer);
+std::vector<PatternResult>
+find_matches(std::string_view mask, std::string_view data,
+             std::span<uint8_t> search_buffer,
+             uint32_t features = cpu_feature::FEATURE_ALL);
 } // namespace detail
 
 struct PatternMatches {
@@ -33,7 +42,8 @@ struct PatternMatches {
 
     uintptr_t extract_call() const {
       const auto data = result.buffer.data() + offset();
-      return reinterpret_cast<uintptr_t>(data + *(int32_t *)(data + 1) + 5);
+      return reinterpret_cast<uintptr_t>(data) +
+             *reinterpret_cast<int32_t *>(data + 1u) + 5ul;
     }
 
     PatternMatch adjust(size_t offset) {
@@ -62,7 +72,8 @@ private:
 
 #if SPUD_OS_WIN
 PatternMatches find_in_module(std::string_view pattern,
-                              std::string_view module = {});
+                              std::string_view module = {},
+                              uint32_t features = cpu_feature::FEATURE_ALL);
 #else
 #endif
 

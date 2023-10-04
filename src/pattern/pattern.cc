@@ -40,14 +40,15 @@ void generate_mask_and_data(std::string_view pattern, std::string &mask,
       data += '\0';
       mask += '?';
     } else if (*ch != ' ') {
-      char str[] = {*ch, *(++ch)};
-      auto digit = strtol(str, nullptr, 16);
-      data += digit;
+      const char str[] = {*ch, *(++ch)};
+      const auto digit = strtol(str, nullptr, 16);
+      data += static_cast<char>(digit);
       mask += '1';
     }
   }
 }
 
+// TODO: This should be elsewhere
 static void run_cpuid(uint32_t eax, uint32_t ecx, uint32_t *abcd) {
 #if defined(_MSC_VER)
   __cpuidex(reinterpret_cast<int *>(abcd), eax, ecx);
@@ -71,7 +72,8 @@ static void run_cpuid(uint32_t eax, uint32_t ecx, uint32_t *abcd) {
 
 std::vector<PatternResult> find_matches(std::string_view mask,
                                         std::string_view data,
-                                        std::span<uint8_t> search_buffer) {
+                                        std::span<uint8_t> search_buffer,
+                                        uint32_t features) {
   const auto does_match = [&](uintptr_t offset) {
     for (size_t i = 0; i < mask.size(); ++i) {
       if (mask[i] == '?')
@@ -98,7 +100,6 @@ std::vector<PatternResult> find_matches(std::string_view mask,
     if (v == 0)
       return 32ul;
     return static_cast<unsigned long>(__builtin_clz(v));
-    // return (unsigned long)(_bit_scan_forward(v));
 #endif
   };
   const auto buffer_end = search_buffer.size() - mask.size();
@@ -107,9 +108,12 @@ std::vector<PatternResult> find_matches(std::string_view mask,
 
   uint32_t abcd[4];
   run_cpuid(7, 0, abcd);
-  uint32_t avx2_bmi12_mask = (1 << 5) | (1 << 3) | (1 << 8);
-  const auto do_avx2 = (abcd[1] & avx2_bmi12_mask) == avx2_bmi12_mask;
-  const auto has_sse42 = false;
+  const auto cpu_has_avx2 = !!(abcd[1] & (1 << 5));
+  const auto do_avx2 = cpu_has_avx2 && ((features & FEATURE_AVX2) == 1);
+
+  run_cpuid(1, 0, abcd);
+  const auto cpu_has_sse42 = !!(abcd[2] & (1 << 19));
+  const auto do_sse42 = cpu_has_sse42 && ((features & FEATURE_SSE42) == 1);
 
 #if __AVX2__
   if (do_avx2) {
@@ -149,20 +153,27 @@ std::vector<PatternResult> find_matches(std::string_view mask,
       const __m256i eq_first = _mm256_cmpeq_epi8(first, first_block);
       const __m256i eq_second = _mm256_cmpeq_epi8(second, second_block);
 
-      uint32_t mask =
+      uint32_t mm_mask =
           _mm256_movemask_epi8(_mm256_and_si256(eq_first, eq_second));
 
-      while (mask != 0) {
-        const auto bit_pos = ctz(mask);
+      while (mm_mask != 0) {
+        const auto bit_pos = ctz(mm_mask);
         if (does_match(offset + bit_pos)) {
           results.emplace_back(search_buffer, offset + bit_pos);
         }
-        mask = mask & (mask - 1);
+        mm_mask = mm_mask & (mm_mask - 1);
+      }
+    }
+
+    // Scan the remainder
+    for (size_t offset = end; offset < buffer_end; ++offset) {
+      if (does_match(offset)) {
+        results.emplace_back(PatternResult{search_buffer, offset});
       }
     }
   } else
 #endif
-      if (has_sse42) {
+      if (do_sse42) {
     __m128i first = _mm_set1_epi8(0);
     __m128i second = _mm_set1_epi8(0);
 
@@ -198,14 +209,22 @@ std::vector<PatternResult> find_matches(std::string_view mask,
       const __m128i eq_first = _mm_cmpeq_epi8(first, first_block);
       const __m128i eq_second = _mm_cmpeq_epi8(second, second_block);
 
-      uint32_t mask = _mm_movemask_epi8(_mm_and_si128(eq_first, eq_second));
+      uint32_t mm_mask = _mm_movemask_epi8(_mm_and_si128(eq_first, eq_second));
 
-      while (mask != 0) {
-        const auto bit_pos = ctz(mask);
+      while (mm_mask != 0) {
+        const auto bit_pos = ctz(mm_mask);
         if (does_match(offset + bit_pos)) {
-          results.emplace_back(PatternResult{search_buffer, offset + bit_pos});
+          results.emplace_back(
+              PatternResult{search_buffer, uintptr_t(offset + bit_pos)});
         }
-        mask = mask & (mask - 1);
+        mm_mask = mm_mask & (mm_mask - 1);
+      }
+    }
+
+    // Scan the remainder
+    for (size_t offset = end; offset < buffer_end; ++offset) {
+      if (does_match(offset)) {
+        results.emplace_back(PatternResult{search_buffer, offset});
       }
     }
   } else {
@@ -221,8 +240,8 @@ std::vector<PatternResult> find_matches(std::string_view mask,
 } // namespace detail
 
 #if SPUD_OS_WIN
-PatternMatches find_in_module(std::string_view pattern,
-                              std::string_view module) {
+PatternMatches find_in_module(std::string_view pattern, std::string_view module,
+                              uint32_t features) {
   std::vector<std::span<uint8_t>> sections;
 
   const auto module_handle = reinterpret_cast<uintptr_t>(
@@ -238,13 +257,15 @@ PatternMatches find_in_module(std::string_view pattern,
     return {};
   }
 
-  auto section = IMAGE_FIRST_SECTION(nt_headers);
+  sections.reserve(nt_headers->FileHeader.NumberOfSections);
+
+  auto nt_section = IMAGE_FIRST_SECTION(nt_headers);
   for (size_t i = 0; i < nt_headers->FileHeader.NumberOfSections;
-       i++, section++) {
-    if ((section->Characteristics & IMAGE_SCN_MEM_READ) != 0) {
-      auto start =
-          reinterpret_cast<uint8_t *>(module_handle + section->VirtualAddress);
-      auto end = start + section->Misc.VirtualSize;
+       i++, nt_section++) {
+    if ((nt_section->Characteristics & IMAGE_SCN_MEM_READ) != 0) {
+      auto start = reinterpret_cast<uint8_t *>(module_handle +
+                                               nt_section->VirtualAddress);
+      auto end = start + nt_section->Misc.VirtualSize;
       auto data = std::span(start, end);
       sections.emplace_back(data);
     }
@@ -255,8 +276,8 @@ PatternMatches find_in_module(std::string_view pattern,
   detail::generate_mask_and_data(pattern, mask, data);
 
   std::vector<detail::PatternResult> results;
-  for (auto section : sections) {
-    auto matches = detail::find_matches(mask, data, section);
+  for (auto &section : sections) {
+    auto matches = detail::find_matches(mask, data, section, features);
     results.insert(results.end(), matches.begin(), matches.end());
   }
   return results;

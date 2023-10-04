@@ -369,9 +369,7 @@ uintptr_t maybe_resolve_jump(uintptr_t address) {
   }
 
   uint32_t offset = 0;
-
   std::memcpy(&offset, &memory[1], sizeof(offset));
-
   return address + offset + 5;
 }
 

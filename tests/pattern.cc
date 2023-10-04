@@ -18,6 +18,7 @@ TEST_CASE("Search pattern with wildcard", "[simple]") {
   std::string mask;
   std::string data;
   spud::detail::generate_mask_and_data(pattern, mask, data);
-  const auto result = spud::detail::find_matches(mask, data, test_bin);
+  const auto result = spud::detail::find_matches(
+      mask, data, test_bin, spud::cpu_feature::FEATURE_ALL);
   REQUIRE(result.size() == 1996);
 }

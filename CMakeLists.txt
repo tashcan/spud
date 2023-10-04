@@ -40,6 +40,14 @@ target_link_libraries("spud" PRIVATE "Zydis")
 target_link_libraries("spud" PRIVATE "asmjit")
 add_dependencies("spud" "Zydis" "asmjit")
 
+if (MSVC)
+target_compile_options(spud PRIVATE
+    #    "/WX"
+    "/permissive-"
+    "/W4"
+)
+endif()
+
 include(CheckIPOSupported)
 check_ipo_supported(RESULT lto_supported OUTPUT error)
 if(lto_supported)
