@@ -10,6 +10,7 @@
 namespace spud {
 
 enum cpu_feature : uint32_t {
+  FEATURE_NONE = 0,
   FEATURE_SSE42 = 1 << 1,
   FEATURE_AVX2 = 1 << 2,
 
