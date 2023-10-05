@@ -58,6 +58,8 @@ enum Arch {
   kHost =
 #if defined(SPUD_ARCH_X86_64)
       Arch::kX86_64
+#elif defined(SPUD_ARCH_X86)
+      Arch::kX86
 #elif defined(SPUD_ARCH_ARM64)
       Arch::kArm64
 #endif
