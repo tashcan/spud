@@ -41,7 +41,7 @@ void generate_mask_and_data(std::string_view pattern, std::string &mask,
       data += '\0';
       mask += '?';
     } else if (*ch != ' ') {
-      const char str[] = {*ch, *(++ch)};
+      const char str[] = {*ch, *(++ch), '\0'};
       const auto digit = strtol(str, nullptr, 16);
       data += static_cast<char>(digit);
       mask += '1';
