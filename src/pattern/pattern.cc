@@ -2,6 +2,7 @@
 #include <spud/pattern.h>
 
 #include <array>
+#include <bit>
 #include <bitset>
 #include <cstdlib>
 #include <span>
@@ -89,31 +90,21 @@ std::vector<PatternResult> find_matches(std::string_view mask,
     return true;
   };
 
-  const auto ctz = [](uint32_t v) {
-    unsigned long index = 0;
-#if SPUD_OS_WIN
-    if (_BitScanForward(&index, v)) {
-      return index;
-    }
-    return 32ul;
-#else
-    if (v == 0)
-      return 32ul;
-    return static_cast<unsigned long>(__builtin_clz(v));
-#endif
-  };
   const auto buffer_end = search_buffer.size() - mask.size();
 
   std::vector<PatternResult> results;
 
+  const bool want_avx2 = ((features & FEATURE_AVX2) != 0);
+  const bool want_sse42 = ((features & FEATURE_SSE42) != 0);
+
   uint32_t abcd[4];
   run_cpuid(7, 0, abcd);
   const auto cpu_has_avx2 = !!(abcd[1] & (1 << 5));
-  const auto do_avx2 = cpu_has_avx2 && ((features & FEATURE_AVX2) == 1);
+  const auto do_avx2 = cpu_has_avx2 && want_avx2;
 
   run_cpuid(1, 0, abcd);
   const auto cpu_has_sse42 = !!(abcd[2] & (1 << 19));
-  const auto do_sse42 = cpu_has_sse42 && ((features & FEATURE_SSE42) == 1);
+  const auto do_sse42 = cpu_has_sse42 && want_sse42;
 
 #if __AVX2__
   if (do_avx2) {
@@ -157,7 +148,7 @@ std::vector<PatternResult> find_matches(std::string_view mask,
           _mm256_movemask_epi8(_mm256_and_si256(eq_first, eq_second));
 
       while (mm_mask != 0) {
-        const auto bit_pos = ctz(mm_mask);
+        const auto bit_pos = std::countr_zero(mm_mask);
         if (does_match(offset + bit_pos)) {
           results.emplace_back(search_buffer, offset + bit_pos);
         }
@@ -199,7 +190,7 @@ std::vector<PatternResult> find_matches(std::string_view mask,
     }
 
     const auto end = buffer_end - spread - ((buffer_end - spread) % 16);
-    for (size_t offset = 0; offset < buffer_end; offset += 16) {
+    for (size_t offset = 0; offset < end; offset += 16) {
       const auto first_block = _mm_loadu_si128(
           reinterpret_cast<const __m128i *>(search_buffer.data() + offset));
       const auto second_block =
@@ -212,7 +203,7 @@ std::vector<PatternResult> find_matches(std::string_view mask,
       uint32_t mm_mask = _mm_movemask_epi8(_mm_and_si128(eq_first, eq_second));
 
       while (mm_mask != 0) {
-        const auto bit_pos = ctz(mm_mask);
+        const auto bit_pos = std::countr_zero(mm_mask);
         if (does_match(offset + bit_pos)) {
           results.emplace_back(
               PatternResult{search_buffer, uintptr_t(offset + bit_pos)});
