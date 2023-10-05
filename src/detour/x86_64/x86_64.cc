@@ -162,6 +162,19 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
                      operands[4], operands[5], operands[6], operands[7],
                      operands[8], operands[9]}};
 
+      if (!relo_meta.contains(entry.instruction)) {
+        char text[50] = {};
+        ZydisFormatter formatter;
+        ZydisFormatterInit(&formatter, ZYDIS_FORMATTER_STYLE_INTEL);
+        ZydisFormatterFormatInstruction(&formatter, &instruction, operands,
+                                        instruction.operand_count_visible, text,
+                                        sizeof(text), kRuntimeAddress,
+                                        ZYAN_NULL);
+        fprintf(stderr,
+                "Instruction that needs relocation is missing relocator: %s\n",
+                text);
+      }
+
       const auto &r_meta = relo_meta.at(entry.instruction);
       relocation_offset += r_meta.expand(entry);
 
