@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1696292088873,
+  "lastUpdate": 1696549425269,
   "repoUrl": "https://github.com/tashcan/spud",
   "entries": {
     "Detour Benchmark": [
@@ -277,6 +277,37 @@ window.BENCHMARK_DATA = {
             "name": "test",
             "value": 11.1098,
             "range": "± 1.24219",
+            "unit": "us",
+            "extra": "100 samples\n3 iterations"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "git@tashcan.com",
+            "name": "tashcan",
+            "username": "tashcan"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "893bbef08260d7778d6cc676eddd3a83bb866d58",
+          "message": "Merge pull request #3 from tashcan/feature/pattern-search\n\nAdd pattern search",
+          "timestamp": "2023-10-05T16:41:15-07:00",
+          "tree_id": "89fdeae6c5d7a2018545715e61aae3fc1687c1fd",
+          "url": "https://github.com/tashcan/spud/commit/893bbef08260d7778d6cc676eddd3a83bb866d58"
+        },
+        "date": 1696549424424,
+        "tool": "catch2",
+        "benches": [
+          {
+            "name": "test",
+            "value": 15.3325,
+            "range": "± 5.24134",
             "unit": "us",
             "extra": "100 samples\n3 iterations"
           }
