@@ -71,8 +71,10 @@ protection_scope::protection_scope(uintptr_t address, size_t size,
       mach_vm_protect(mach_task_self(), address_, size_, FALSE, protection);
   assert(err == KERN_SUCCESS);
 #elif SPUD_OS_LINUX
-  long pagesize = sysconf(_SC_PAGE_SIZE);
-  address = address - (address % pagesize);
+  auto page_size = sysconf(_SC_PAGE_SIZE);
+  auto aligned_address = ((address) & ~((page_size)-1));
+  size = size + address - aligned_address;
+  size = (size + page_size - 1) & ~(page_size - 1);
 
   int protection = 0;
   if (protect == mem_protection::READ_WRITE_EXECUTE) {
@@ -86,7 +88,7 @@ protection_scope::protection_scope(uintptr_t address, size_t size,
     protection = PROT_READ | PROT_WRITE;
   }
 
-  mprotect((void *)address, size, protection);
+  mprotect(reinterpret_cast<void *>(aligned_address), size, protection);
 #endif
 }
 protection_scope::~protection_scope() {
