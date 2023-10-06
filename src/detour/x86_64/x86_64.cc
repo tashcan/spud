@@ -162,7 +162,8 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
                      operands[4], operands[5], operands[6], operands[7],
                      operands[8], operands[9]}};
 
-      if (!relo_meta.contains(entry.instruction)) {
+      auto relocation_meta_info = relo_meta.find(entry.instruction);
+      if (relocation_meta_info == relo_meta.end()) {
         char text[50] = {};
         ZydisFormatter formatter;
         ZydisFormatterInit(&formatter, ZYDIS_FORMATTER_STYLE_INTEL);
@@ -175,7 +176,7 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
                 text);
       }
 
-      const auto &r_meta = relo_meta.at(entry.instruction);
+      const auto &r_meta = relocation_meta_info->second;
       relocation_offset += r_meta.expand(entry);
 
       relocations.emplace_back(entry);
