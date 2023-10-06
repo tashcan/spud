@@ -57,21 +57,19 @@ TEST_CASE("pattern search", "[benchmark]") {
   constexpr auto BUFFER_SIZE = 1 * 1024 * 1024 * 1024;
 
   std::vector<uint8_t> search_buffer;
-  for (size_t i = 0; i < BUFFER_SIZE; ++i) {
-    search_buffer.emplace_back(static_cast<uint8_t>(i));
-    if (i == 250 * 1024 * 1024) {
-      search_buffer.emplace_back(0x4C);
-      search_buffer.emplace_back(0x89);
-      search_buffer.emplace_back(0x44);
-      search_buffer.emplace_back(0x24);
-      search_buffer.emplace_back(0x33);
-      search_buffer.emplace_back(0x48);
-      search_buffer.emplace_back(0x89);
-      search_buffer.emplace_back(0x54);
-      search_buffer.emplace_back(0x24);
-      i += 10;
-    }
-  }
+  search_buffer.resize(BUFFER_SIZE, 0xCC);
+
+  constexpr auto i = 250 * 1024 * 1024;
+
+  search_buffer[i] = 0x4C;
+  search_buffer[i + 1] = 0x89;
+  search_buffer[i + 2] = 0x44;
+  search_buffer[i + 3] = 0x24;
+  search_buffer[i + 4] = 0x33;
+  search_buffer[i + 5] = 0x48;
+  search_buffer[i + 6] = 0x89;
+  search_buffer[i + 7] = 0x54;
+  search_buffer[i + 8] = 0x24;
 
   const auto pattern = "4C 89 44 24 ? 48 89 54 24";
 
