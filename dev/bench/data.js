@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1696549425269,
+  "lastUpdate": 1696626015265,
   "repoUrl": "https://github.com/tashcan/spud",
   "entries": {
     "Detour Benchmark": [
@@ -310,6 +310,58 @@ window.BENCHMARK_DATA = {
             "range": "± 5.24134",
             "unit": "us",
             "extra": "100 samples\n3 iterations"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "committer": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "distinct": true,
+          "id": "74a9989c0497bbcd1c9c9daa855de46f87705cea",
+          "message": "Let's try that forked action again",
+          "timestamp": "2023-10-06T13:52:20-07:00",
+          "tree_id": "f827308767bc06c68290760cddf599cb07f8d8be",
+          "url": "https://github.com/tashcan/spud/commit/74a9989c0497bbcd1c9c9daa855de46f87705cea"
+        },
+        "date": 1696626014728,
+        "tool": "catch2",
+        "benches": [
+          {
+            "name": "simple detour",
+            "value": 13.7624,
+            "range": "± 1.24653",
+            "unit": "us",
+            "extra": "100 samples\n3 iterations"
+          },
+          {
+            "name": "1GB search",
+            "value": 3.02949,
+            "range": "± 5.29811",
+            "unit": "s",
+            "extra": "100 samples\n1 iterations"
+          },
+          {
+            "name": "1GB search SSE 4.2",
+            "value": 157.908,
+            "range": "± 2.05272",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
+          },
+          {
+            "name": "1GB search AVX2",
+            "value": 118.71,
+            "range": "± 2.33974",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
           }
         ]
       }
