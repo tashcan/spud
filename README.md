@@ -44,7 +44,7 @@ void hook(auto original, int n) {
   return original(n);
 }
 
-void test_function(auto original, int n) {
+void test_function(int n) {
   if (n == 0) {
     printf("N was 0\n");
   }
