@@ -109,13 +109,23 @@ endif()
 if (WIN32)
     file(GLOB_RECURSE ASM_SRCS src/detour/x86_64/*.asm)
 else()
-if (ARCH MATCHES "arm64")
-    file(GLOB_RECURSE ASM_SRCS src/detour/aarch64/*.S)
+    if (ARCH MATCHES "arm64")
+        file(GLOB_RECURSE ASM_SRCS src/detour/aarch64/*.S)
+    else()
+        file(GLOB_RECURSE ASM_SRCS src/detour/x86_64/*.S)
+    endif()
+endif(WIN32)
+
+file(GLOB_RECURSE SPUD_SSE_SRCS src/*_sse.cc)
+file(GLOB_RECURSE SPUD_AVX2_SRCS src/*_avx2.cc)
+
+if (MSVC)
+    SET_SOURCE_FILES_PROPERTIES(${SPUD_AVX2_SRCS} PROPERTIES COMPILE_FLAGS "/arch:AVX2")
 else()
-    file(GLOB_RECURSE ASM_SRCS src/detour/x86_64/*.S)
+    SET_SOURCE_FILES_PROPERTIES(${SPUD_AVX2_SRCS} PROPERTIES COMPILE_FLAGS "-mavx2 -mfma -msse4.2")
+    SET_SOURCE_FILES_PROPERTIES(${SPUD_SSE_SRCS} PROPERTIES COMPILE_FLAGS "-msse4.2")
 endif()
 
-endif(WIN32)
 target_sources("spud"
     PRIVATE
     "src/utils.cc"
@@ -135,7 +145,10 @@ target_sources("spud"
     "src/memory/protection.cc"
     "src/pattern/pattern.cc"
     "${ASM_SRCS}"
+    "${SPUD_SSE_SRCS}"
+    "${SPUD_AVX2_SRCS}"
 )
+
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
