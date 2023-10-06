@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1696626015265,
+  "lastUpdate": 1696627021032,
   "repoUrl": "https://github.com/tashcan/spud",
   "entries": {
     "Detour Benchmark": [
@@ -360,6 +360,58 @@ window.BENCHMARK_DATA = {
             "name": "1GB search AVX2",
             "value": 118.71,
             "range": "± 2.33974",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "committer": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "distinct": true,
+          "id": "9c07b80f53be595c36c822d01f0636b9b0b96d4e",
+          "message": "Use find instead of contains + at",
+          "timestamp": "2023-10-06T14:09:09-07:00",
+          "tree_id": "42bb66c911bc4234edcf32465829c7aa37d6f636",
+          "url": "https://github.com/tashcan/spud/commit/9c07b80f53be595c36c822d01f0636b9b0b96d4e"
+        },
+        "date": 1696627020128,
+        "tool": "catch2",
+        "benches": [
+          {
+            "name": "simple detour",
+            "value": 14.3504,
+            "range": "± 985.242",
+            "unit": "us",
+            "extra": "100 samples\n3 iterations"
+          },
+          {
+            "name": "1GB search",
+            "value": 3.02822,
+            "range": "± 9.02704",
+            "unit": "s",
+            "extra": "100 samples\n1 iterations"
+          },
+          {
+            "name": "1GB search SSE 4.2",
+            "value": 146.896,
+            "range": "± 418.645",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
+          },
+          {
+            "name": "1GB search AVX2",
+            "value": 87.7647,
+            "range": "± 361.564",
             "unit": "ms",
             "extra": "100 samples\n1 iterations"
           }
