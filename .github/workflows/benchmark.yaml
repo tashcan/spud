@@ -39,7 +39,7 @@ jobs:
         run: ${{ steps.strings.outputs.build-output-dir }}/spud.benchmark | tee ${{ github.workspace }}/benchmark_result.txt
 
       - name: Store benchmark result
-        uses: tashcan/github-action-benchmark@v1.1.9-alpha.1
+        uses: tashcan/github-action-benchmark@tash
         with:
           name: Detour Benchmark
           tool: 'catch2'
