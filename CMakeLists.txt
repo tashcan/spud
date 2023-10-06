@@ -16,6 +16,8 @@ set(CXX_STANDARD_REQUIRED ON)
 set(ASMJIT_STATIC TRUE)
 
 if (NOT TARGET Zydis)
+option(ZYDIS_BUILD_TOOLS "" OFF)
+option(ZYDIS_BUILD_EXAMPLES "" OFF)
 FetchContent_Declare(
   zydis
   GIT_REPOSITORY https://github.com/zyantific/zydis.git
