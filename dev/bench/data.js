@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1696627021032,
+  "lastUpdate": 1696631632662,
   "repoUrl": "https://github.com/tashcan/spud",
   "entries": {
     "Detour Benchmark": [
@@ -412,6 +412,58 @@ window.BENCHMARK_DATA = {
             "name": "1GB search AVX2",
             "value": 87.7647,
             "range": "± 361.564",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "committer": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "distinct": true,
+          "id": "78427d3cbb3b518ecf79fb765e3e7747569b66d7",
+          "message": "Fix example in README.md",
+          "timestamp": "2023-10-06T15:27:32-07:00",
+          "tree_id": "b36d19d7c05da441f1df8625fc56aa19ccce09bc",
+          "url": "https://github.com/tashcan/spud/commit/78427d3cbb3b518ecf79fb765e3e7747569b66d7"
+        },
+        "date": 1696631631580,
+        "tool": "catch2",
+        "benches": [
+          {
+            "name": "simple detour",
+            "value": 19.7641,
+            "range": "± 41.5323",
+            "unit": "us",
+            "extra": "100 samples\n3 iterations"
+          },
+          {
+            "name": "1GB search",
+            "value": 1.77725,
+            "range": "± 47.94",
+            "unit": "s",
+            "extra": "100 samples\n1 iterations"
+          },
+          {
+            "name": "1GB search SSE 4.2",
+            "value": 168.666,
+            "range": "± 5.13993",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
+          },
+          {
+            "name": "1GB search AVX2",
+            "value": 148.075,
+            "range": "± 5.27058",
             "unit": "ms",
             "extra": "100 samples\n1 iterations"
           }
