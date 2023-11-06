@@ -15,9 +15,18 @@ set(CXX_STANDARD_REQUIRED ON)
 # set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 set(ASMJIT_STATIC TRUE)
 
+option(SPUD_COMPARE_LIBS "" OFF)
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+set(__SPUD_IS_SELF ON)
+else()
+set(__SPUD_IS_SELF OFF)
+endif()
+option(SPUD_BUILD_TESTS "" ${__SPUD_IS_SELF})
+
 if (NOT TARGET Zydis)
 option(ZYDIS_BUILD_TOOLS "" OFF)
 option(ZYDIS_BUILD_EXAMPLES "" OFF)
+option(ZYDIS_BUILD_TOOLS "" OFF)
 FetchContent_Declare(
   zydis
   GIT_REPOSITORY https://github.com/zyantific/zydis.git
@@ -151,8 +160,7 @@ target_sources("spud"
     "${SPUD_AVX2_SRCS}"
 )
 
-
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+if(SPUD_BUILD_TESTS)
 
 if (WIN32)
 file(GLOB_RECURSE TEST_SRCS tests/x86_64/*.cc tests/x86_64/*.h tests/x86_64/*.asm)
@@ -178,7 +186,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 endif()
 
-if (COMPARE_LIBS)
+if (SPUD_COMPARE_LIBS)
 
 add_compile_definitions("SPUD_COMPARE_LIBS=1")
 
@@ -195,6 +203,16 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(minhook)
+
+set(ASMJIT_EXTERNAL ON)
+set(POLYHOOK_USE_EXTERNAL_ZYDIS ON)
+set(POLYHOOK_USE_EXTERNAL_ASMJIT ON)
+FetchContent_Declare(
+    PolyHook2
+    GIT_REPOSITORY "https://github.com/stevemk14ebr/PolyHook_2_0"
+)
+FetchContent_MakeAvailable(PolyHook2)
+
 endif()
 
 add_executable("spud.test" ${TEST_SRCS} "tests/test_util.h" "tests/pattern.cc")
@@ -204,8 +222,8 @@ add_dependencies("spud.test" "Catch2" "spud")
 
 add_executable("spud.benchmark" ${BENCHMARK_SRCS})
 target_include_directories("spud.benchmark" PRIVATE "benchmark")
-if (COMPARE_LIBS)
-target_link_libraries("spud.benchmark" PRIVATE "Catch2" "Catch2::Catch2WithMain" "spud" "lime" "minhook")
+if (SPUD_COMPARE_LIBS)
+target_link_libraries("spud.benchmark" PRIVATE "Catch2" "Catch2::Catch2WithMain" "spud" "lime" "minhook" "PolyHook2")
 else()
 target_link_libraries("spud.benchmark" PRIVATE "Catch2" "Catch2::Catch2WithMain" "spud")
 endif()

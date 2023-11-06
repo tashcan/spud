@@ -29,8 +29,7 @@ struct DetourImpl {
                                                             size_t jump_size);
   size_t (*get_trampoline_size)(std::span<uint8_t> target,
                                 const RelocationInfo &relocation);
-  Trampoline (*create_trampoline)(uintptr_t trampoline_address,
-                                  uintptr_t return_address,
+  Trampoline (*create_trampoline)(uintptr_t return_address,
                                   std::span<uint8_t> target,
                                   const RelocationInfo &relocation_infos);
   uintptr_t (*maybe_resolve_jump)(uintptr_t) = [](auto v) { return v; };
@@ -70,15 +69,8 @@ detail::detour &detour::install(Arch arch) {
   // Required trampoline size is how many bytes we have to take up of the
   // original function This will then be used to calculate the expanded size,
   // since we do have some instruction replacement and expansion going on
-  auto trampoline_size = impl.get_trampoline_size(
-      {reinterpret_cast<uint8_t *>(address_), required_trampoline_size},
-      relocation_infos);
-
-  auto trampoline_address = alloc_executable_memory(trampoline_size);
-  assert(trampoline_address != nullptr);
 
   auto trampoline = impl.create_trampoline(
-      reinterpret_cast<uintptr_t>(trampoline_address),
       address_ + required_trampoline_size,
       {reinterpret_cast<uint8_t *>(address_), required_trampoline_size},
       relocation_infos);
@@ -86,6 +78,9 @@ detail::detour &detour::install(Arch arch) {
   // TODO(tashcan): This isn't particularly amazing, we might have to ajdust
   // permissions
   disable_jit_write_protection();
+
+  auto trampoline_address = alloc_executable_memory(trampoline.data.size());
+  assert(trampoline_address != nullptr);
 
   std::memcpy(trampoline_address, trampoline.data.data(),
               trampoline.data.size());

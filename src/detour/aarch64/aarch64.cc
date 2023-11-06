@@ -67,8 +67,7 @@ size_t get_trampoline_size(std::span<uint8_t> target,
   return required_space;
 }
 
-Trampoline create_trampoline(uintptr_t trampoline_address,
-                             uintptr_t return_address,
+Trampoline create_trampoline(uintptr_t return_address,
                              std::span<uint8_t> target,
                              const RelocationInfo &relocation_infos) {
   //
@@ -76,7 +75,7 @@ Trampoline create_trampoline(uintptr_t trampoline_address,
   using namespace asmjit::a64;
 
   CodeHolder code;
-  code.init(Environment{asmjit::Arch::kAArch64}, trampoline_address);
+  code.init(Environment{asmjit::Arch::kAArch64}, 0x0);
   Assembler assembler(&code);
 
   const auto target_start = reinterpret_cast<uintptr_t>(target.data());

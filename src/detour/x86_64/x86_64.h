@@ -32,8 +32,7 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
                                                        size_t jump_size);
 size_t get_trampoline_size(std::span<uint8_t> target,
                            const RelocationInfo &relocation);
-Trampoline create_trampoline(uintptr_t trampoline_address,
-                             uintptr_t return_address,
+Trampoline create_trampoline(uintptr_t return_address,
                              std::span<uint8_t> target,
                              const RelocationInfo &relocation_infos);
 uintptr_t maybe_resolve_jump(uintptr_t);
