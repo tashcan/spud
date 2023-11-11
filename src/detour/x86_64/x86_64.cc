@@ -35,17 +35,18 @@ namespace x64 {
 struct RelocationResult {
   std::vector<asmjit::Label> data_labels;
   size_t copy_offset;
+  std::vector<std::pair<uintptr_t, uintptr_t>> relocation_offsets;
 };
 
 static RelocationResult
 do_far_relocations(std::span<uint8_t> target,
                    const RelocationInfo &relocation_info,
                    asmjit::CodeHolder &code, asmjit::x86::Assembler &assembler);
-static void write_relocation_data(std::span<uint8_t> target,
-                                  const RelocationInfo &relocation_info,
-                                  std::vector<asmjit::Label> relocation_data,
-                                  asmjit::CodeHolder &code,
-                                  asmjit::x86::Assembler &assembler);
+static void write_relocation_data(
+    std::span<uint8_t> target, const RelocationInfo &relocation_info,
+    std::vector<asmjit::Label> relocation_data,
+    std::vector<std::pair<uintptr_t, uintptr_t>> relocation_offsets,
+    asmjit::CodeHolder &code, asmjit::x86::Assembler &assembler);
 
 static bool is_jump(ZydisDecodedInstruction &instruction) {
   // TODO(alexander): This is less than ideal
@@ -246,7 +247,8 @@ Trampoline create_trampoline(uintptr_t return_address,
     auto data_offset = assembler.code()->textSection()->bufferSize();
     data_offset = data_offset;
     write_relocation_data(target, relocations, relocation_result.data_labels,
-                          code, assembler);
+                          relocation_result.relocation_offsets, code,
+                          assembler);
   } else {
     assembler.embed(target.data(), target.size());
     assembler.jmp(ptr(rip, 0));
@@ -263,6 +265,24 @@ Trampoline create_trampoline(uintptr_t return_address,
   ZydisDisassembledInstruction instruction;
 
   return {0, {buffer.begin(), buffer.end()}};
+}
+
+static void offset_target(auto size, auto target_code, auto target) {
+  switch (size) {
+  case 8: {
+    assert(target < 0xFF && "immediate size too small for relocation");
+    *(int8_t *)(target_code) += target;
+  } break;
+  case 16: {
+    *(int16_t *)(target_code) += target;
+  } break;
+  case 32: {
+    *(int32_t *)(target_code) += target;
+  } break;
+  case 64: {
+    *(int64_t *)(target_code) += target;
+  } break;
+  }
 }
 
 static RelocationResult do_far_relocations(
@@ -282,6 +302,9 @@ static RelocationResult do_far_relocations(
   size_t relocation_data_idx = 0;
   size_t copy_offset = 0;
 
+  std::vector<std::pair<uintptr_t, uintptr_t>> relocation_offsets;
+
+  uintptr_t relocation_offset = 0u;
   for (const auto &relocation : relocation_info.relocations) {
     const auto &relo = std::get<x64::RelocationEntry>(relocation);
     const auto &r_meta = relo_meta.at(relo.instruction);
@@ -301,23 +324,103 @@ static RelocationResult do_far_relocations(
 
     // Place the cursor at the end of the instruction
     copy_offset = relo.address + relo.instruction.length;
+    relocation_offsets.emplace_back(std::pair{relo.address, relocation_offset});
     r_meta.gen_relo_code(target, relo, relocation_info, data_label, assembler);
+    relocation_offset += code.textSection()->bufferSize() - relo.address - relo.instruction.length;
   }
 
-  return {relocation_data, copy_offset};
+  return {relocation_data, copy_offset, relocation_offsets};
 }
 
-static void write_relocation_data(std::span<uint8_t> target,
-                                  const RelocationInfo &relocation_info,
-                                  std::vector<asmjit::Label> relocation_data,
-                                  asmjit::CodeHolder &code,
-                                  asmjit::x86::Assembler &assembler) {
+static void write_adjusted_target(auto size, auto target_code, auto target) {
+  switch (size) {
+  case 8: {
+    assert(target < 0xFF && "immediate size too small for relocation");
+    *(int8_t *)(target_code) = target;
+  } break;
+  case 16: {
+    *(int16_t *)(target_code) = target;
+  } break;
+  case 32: {
+    *(int32_t *)(target_code) = target;
+  } break;
+  case 64: {
+    *(int64_t *)(target_code) = target;
+  } break;
+  }
+}
+
+static void write_relocation_data(
+    std::span<uint8_t> target, const RelocationInfo &relocation_info,
+    std::vector<asmjit::Label> relocation_data,
+    std::vector<std::pair<uintptr_t, uintptr_t>> relocation_offsets,
+    asmjit::CodeHolder &code, asmjit::x86::Assembler &assembler) {
   size_t relocation_data_idx = 0;
   for (const auto &relocation : relocation_info.relocations) {
     const auto &relo = std::get<x64::RelocationEntry>(relocation);
     const auto &r_meta = relo_meta.at(relo.instruction);
     r_meta.gen_relo_data(target, relo, relocation_data[relocation_data_idx],
                          assembler, relocation_info);
+
+    if (relo.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE) {
+
+      auto *code_data = code.textSection()->data();
+
+      const auto data_offset = relo.instruction.raw.imm[0].size > 0
+                                   ? relo.instruction.raw.imm[0].offset
+                                   : relo.instruction.raw.disp.offset;
+      const auto data_size = relo.instruction.raw.imm[0].size > 0
+                                 ? relo.instruction.raw.imm[0].size
+                                 : relo.instruction.raw.disp.size;
+      auto target_code = reinterpret_cast<uint8_t *>(code_data + data_offset);
+
+      auto target_start = reinterpret_cast<uintptr_t>(target.data());
+      auto target_end = target_start + target.size();
+
+      ZyanU64 jump_target = 0;
+      if (ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(&relo.instruction,
+                                                &relo.operands[0], target_start,
+                                                &jump_target))) {
+
+        uintptr_t relocated_location = 0u;
+        for (auto &&[k, v] : relocation_offsets) {
+          relocated_location = v;
+          if (k >= relo.address)
+            break;
+        }
+        relocated_location += relo.address;
+
+        const auto inside_target =
+            jump_target >= target_start && jump_target <= target_end;
+        if (!inside_target) {
+          const auto label_jump_target =
+              code.labelOffset(relocation_data[relocation_data_idx]);
+          write_adjusted_target(
+              data_size, target_code + relocated_location,
+                                label_jump_target - (jump_target - target_start - data_offset) + relo.instruction.length);
+        } else {
+          const auto target_offset_address =
+              jump_target - target_start;
+
+          uintptr_t offset = 0u;
+          for (auto &&[k, v] : relocation_offsets) {
+            offset = v;
+            if (k >= target_offset_address)
+              break;
+          }
+
+          uintptr_t preceeding_relo_offset = 0;
+          for (auto &&[k, v] : relocation_offsets) {
+            if (k >= target_offset_address)
+              break;
+            preceeding_relo_offset = v;
+          }
+
+          offset_target(data_size, target_code + relocated_location,
+                        offset - preceeding_relo_offset);
+        }
+      }
+    }
     ++relocation_data_idx;
   }
 }
