@@ -142,11 +142,10 @@ const static RelocationMeta jump_relocator = {
             assert(false && "Failed to calculate absolute target jump address");
           }
         },
-    .gen_relo_code =
-        [](std::span<uint8_t> target, const RelocationEntry &relo,
-           const RelocationInfo &relocation_info, asmjit::Label relocation_data,
-           asmjit::x86::Assembler &assembler) {
-        },
+    .gen_relo_code = [](std::span<uint8_t> target, const RelocationEntry &relo,
+                        const RelocationInfo &relocation_info,
+                        asmjit::Label relocation_data,
+                        asmjit::x86::Assembler &assembler) {},
     .copy_instruction = true};
 
 const static RelocationMeta lea_relocator = {

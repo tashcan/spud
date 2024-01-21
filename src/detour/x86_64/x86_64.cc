@@ -326,7 +326,8 @@ static RelocationResult do_far_relocations(
     copy_offset = relo.address + relo.instruction.length;
     relocation_offsets.emplace_back(std::pair{relo.address, relocation_offset});
     r_meta.gen_relo_code(target, relo, relocation_info, data_label, assembler);
-    relocation_offset += code.textSection()->bufferSize() - relo.address - relo.instruction.length;
+    relocation_offset += code.textSection()->bufferSize() - relo.address -
+                         relo.instruction.length;
   }
 
   return {relocation_data, copy_offset, relocation_offsets};
@@ -395,12 +396,12 @@ static void write_relocation_data(
         if (!inside_target) {
           const auto label_jump_target =
               code.labelOffset(relocation_data[relocation_data_idx]);
-          write_adjusted_target(
-              data_size, target_code + relocated_location,
-                                label_jump_target - (jump_target - target_start - data_offset) + relo.instruction.length);
+          write_adjusted_target(data_size, target_code + relocated_location,
+                                label_jump_target -
+                                    (jump_target - target_start - data_offset) +
+                                    relo.instruction.length);
         } else {
-          const auto target_offset_address =
-              jump_target - target_start;
+          const auto target_offset_address = jump_target - target_start;
 
           uintptr_t offset = 0u;
           for (auto &&[k, v] : relocation_offsets) {
