@@ -102,9 +102,9 @@ const static RelocationMeta generic_relocator = {
       req_operand->mem.scale = 0;
       req_operand->mem.displacement = 0;
       req_operand->mem.size =
-          request.operands[0].type == ZYDIS_OPERAND_TYPE_MEMORY
+          (request.operands[0].type == ZYDIS_OPERAND_TYPE_MEMORY
               ? operands[0].size
-              : operands[1].size;
+              : operands[1].size) / 8;
 
       std::array<uint8_t, 15> buffer;
       size_t buffer_length = buffer.size();
