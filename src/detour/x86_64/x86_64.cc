@@ -396,10 +396,11 @@ static void write_relocation_data(
         if (!inside_target) {
           const auto label_jump_target =
               code.labelOffset(relocation_data[relocation_data_idx]);
-          write_adjusted_target(data_size, target_code + relocated_location,
-                                label_jump_target -
-                                    (jump_target - target_start - data_offset) +
-                                    relo.instruction.length);
+          const auto jump_offset = jump_target - target_start;
+          const auto new_target =
+              label_jump_target - relocated_location - relo.instruction.length;
+          write_adjusted_target(
+                  data_size, target_code + relocated_location, new_target);
         } else {
           const auto target_offset_address = jump_target - target_start;
 
