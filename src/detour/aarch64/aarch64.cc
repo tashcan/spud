@@ -51,21 +51,6 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
 
   return {relocation_info, jump_size};
 }
-size_t get_trampoline_size(std::span<uint8_t> target,
-                           const RelocationInfo &relocation_info) {
-  //
-  size_t required_space = target.size();
-
-  auto target_start = reinterpret_cast<uintptr_t>(target.data());
-  // for (const auto &relot : relocation_info.relocations) {
-  //   auto &relo = std::get<RelocationEntry>(relot);
-
-  //   auto &r_meta = relo_meta.at(relo.instruction);
-  //   required_space += r_meta.size;
-  // }
-  required_space += kAbsoluteJumpSize;
-  return required_space;
-}
 
 Trampoline create_trampoline(uintptr_t return_address,
                              std::span<uint8_t> target,

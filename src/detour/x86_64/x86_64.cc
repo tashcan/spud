@@ -62,15 +62,15 @@ static bool is_jump(ZydisDecodedInstruction &instruction) {
 }
 
 static bool
-needs_relocate(uintptr_t decoder_offset, intptr_t code_end, intptr_t jump_size,
-               ZydisDecodedInstruction &instruction,
+needs_relocate(uintptr_t decoder_offset, uintptr_t code_end,
+               uintptr_t jump_size, ZydisDecodedInstruction &instruction,
                ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT]) {
 
   if ((instruction.attributes & ZYDIS_ATTRIB_IS_RELATIVE) == 0) {
     return false;
   }
 
-  constexpr auto kRuntimeAddress = 0x7700000000;
+  constexpr auto kRuntimeAddress = 0x7700000000u;
 
   for (auto i = 0; i < instruction.operand_count; ++i) {
     ZyanU64 result = 0;
@@ -135,10 +135,8 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
   //
   ZydisDecoder decoder;
   ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
-  //
 
   ZydisDecodedInstruction instruction;
-  ZydisDecoderContext context;
   uintptr_t decoder_offset = 0;
   intptr_t decode_length = 0x40;
 
@@ -159,13 +157,13 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
 
     if (needs_relocate(decoder_offset, extend_trampoline_to, jump_size,
                        instruction, operands)) {
-      auto entry = RelocationEntry{
+      const auto entry = RelocationEntry{
           decoder_offset, instruction,
           std::array{operands[0], operands[1], operands[2], operands[3],
                      operands[4], operands[5], operands[6], operands[7],
                      operands[8], operands[9]}};
 
-      auto relocation_meta_info = relo_meta.find(entry.instruction);
+      /*const auto relocation_meta_info = relo_meta.find(entry.instruction);
       if (relocation_meta_info == relo_meta.end()) {
         char text[50] = {};
         ZydisFormatter formatter;
@@ -177,9 +175,7 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
         fprintf(stderr,
                 "Instruction that needs relocation is missing relocator: %s\n",
                 text);
-      }
-
-      const auto &r_meta = relocation_meta_info->second;
+      }*/
 
       relocations.emplace_back(entry);
       extend_trampoline_to =
@@ -208,19 +204,6 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
   relocation_info.relocations = {relocations.begin(), relocations.end()};
 
   return {relocation_info, extend_trampoline_to};
-}
-
-size_t get_trampoline_size(std::span<uint8_t> target,
-                           const RelocationInfo &relocation_info) {
-  size_t required_space = target.size();
-  for (const auto &relocation : relocation_info.relocations) {
-    const auto &relo = std::get<RelocationEntry>(relocation);
-    const auto &r_meta = relo_meta.at(relo.instruction);
-
-    required_space += r_meta.size;
-  }
-  required_space += kAbsoluteJumpSize;
-  return required_space;
 }
 
 Trampoline create_trampoline(uintptr_t return_address,
@@ -260,10 +243,6 @@ Trampoline create_trampoline(uintptr_t return_address,
 
   auto &buffer = code.textSection()->buffer();
 
-  uintptr_t decoder_offset = 0;
-  intptr_t decode_length = 0x40;
-  ZydisDisassembledInstruction instruction;
-
   return {0, {buffer.begin(), buffer.end()}};
 }
 
@@ -271,16 +250,16 @@ static void offset_target(auto size, auto target_code, auto target) {
   switch (size) {
   case 8: {
     assert(target < 0xFF && "immediate size too small for relocation");
-    *(int8_t *)(target_code) += target;
+    *(int8_t *)(target_code) += static_cast<int8_t>(target);
   } break;
   case 16: {
-    *(int16_t *)(target_code) += target;
+    *(int16_t *)(target_code) += static_cast<int16_t>(target);
   } break;
   case 32: {
-    *(int32_t *)(target_code) += target;
+    *(int32_t *)(target_code) += static_cast<int32_t>(target);
   } break;
   case 64: {
-    *(int64_t *)(target_code) += target;
+    *(int64_t *)(target_code) += static_cast<int64_t>(target);
   } break;
   }
 }
@@ -294,12 +273,6 @@ static RelocationResult do_far_relocations(
   std::vector<Label> relocation_data;
   relocation_data.reserve(10);
 
-  size_t relocation_data_offset = target.size() + 14;
-
-  // TODO(alexander): This is effectively what get_trampoline_size does
-  // so we should probably clean that up here at some point
-
-  size_t relocation_data_idx = 0;
   size_t copy_offset = 0;
 
   std::vector<std::pair<uintptr_t, uintptr_t>> relocation_offsets;
@@ -307,7 +280,7 @@ static RelocationResult do_far_relocations(
   uintptr_t relocation_offset = 0u;
   for (const auto &relocation : relocation_info.relocations) {
     const auto &relo = std::get<x64::RelocationEntry>(relocation);
-    const auto &r_meta = relo_meta.at(relo.instruction);
+    const auto &r_meta = get_relocator_for_instruction(relo.instruction);
     auto data_label = assembler.newLabel();
     relocation_data.emplace_back(data_label);
     if (r_meta.copy_instruction) {
@@ -337,16 +310,16 @@ static void write_adjusted_target(auto size, auto target_code, auto target) {
   switch (size) {
   case 8: {
     assert(target < 0xFF && "immediate size too small for relocation");
-    *(int8_t *)(target_code) = target;
+    *(int8_t *)(target_code) = static_cast<int8_t>(target);
   } break;
   case 16: {
-    *(int16_t *)(target_code) = target;
+    *(int16_t *)(target_code) = static_cast<int16_t>(target);
   } break;
   case 32: {
-    *(int32_t *)(target_code) = target;
+    *(int32_t *)(target_code) = static_cast<int32_t>(target);
   } break;
   case 64: {
-    *(int64_t *)(target_code) = target;
+    *(int64_t *)(target_code) = static_cast<int64_t>(target);
   } break;
   }
 }
@@ -359,7 +332,7 @@ static void write_relocation_data(
   size_t relocation_data_idx = 0;
   for (const auto &relocation : relocation_info.relocations) {
     const auto &relo = std::get<x64::RelocationEntry>(relocation);
-    const auto &r_meta = relo_meta.at(relo.instruction);
+    const auto &r_meta = get_relocator_for_instruction(relo.instruction);
     r_meta.gen_relo_data(target, relo, relocation_data[relocation_data_idx],
                          assembler, relocation_info);
 
@@ -396,11 +369,10 @@ static void write_relocation_data(
         if (!inside_target) {
           const auto label_jump_target =
               code.labelOffset(relocation_data[relocation_data_idx]);
-          const auto jump_offset = jump_target - target_start;
           const auto new_target =
               label_jump_target - relocated_location - relo.instruction.length;
-          write_adjusted_target(
-                  data_size, target_code + relocated_location, new_target);
+          write_adjusted_target(data_size, target_code + relocated_location,
+                                new_target);
         } else {
           const auto target_offset_address = jump_target - target_start;
 
@@ -435,13 +407,6 @@ std::vector<uint8_t> create_absolute_jump(uintptr_t target_address,
   CodeHolder code;
   code.init(Environment{asmjit::Arch::kX64});
   Assembler assembler(&code);
-
-  // assembler.int3();
-  // assembler.push(r14);
-  // assembler.mov(r14, data);
-  // assembler.mov(qword_ptr(r14), r15);
-  // assembler.mov(r15, r14);
-  // assembler.pop(r14);
 
   assembler.mov(r11, data);
   assembler.jmp(ptr(rip, 0));

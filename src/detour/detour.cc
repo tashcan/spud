@@ -27,8 +27,6 @@ struct DetourImpl {
                                                uintptr_t data);
   std::tuple<RelocationInfo, size_t> (*collect_relocations)(uintptr_t address,
                                                             size_t jump_size);
-  size_t (*get_trampoline_size)(std::span<uint8_t> target,
-                                const RelocationInfo &relocation);
   Trampoline (*create_trampoline)(uintptr_t return_address,
                                   std::span<uint8_t> target,
                                   const RelocationInfo &relocation_infos);
@@ -39,7 +37,6 @@ const static std::array<DetourImpl, Arch::kCount> kDetourImpls = {
     // x86_64
     DetourImpl{.create_absolute_jump = x64::create_absolute_jump,
                .collect_relocations = x64::collect_relocations,
-               .get_trampoline_size = x64::get_trampoline_size,
                .create_trampoline = x64::create_trampoline,
                .maybe_resolve_jump = x64::maybe_resolve_jump},
     // x86
@@ -47,7 +44,6 @@ const static std::array<DetourImpl, Arch::kCount> kDetourImpls = {
     // Arm64
     DetourImpl{.create_absolute_jump = arm64::create_absolute_jump,
                .collect_relocations = arm64::collect_relocations,
-               .get_trampoline_size = arm64::get_trampoline_size,
                .create_trampoline = arm64::create_trampoline},
 };
 

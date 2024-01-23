@@ -23,38 +23,7 @@ struct RelocationMeta {
   bool copy_instruction = false;
 };
 
-struct ReloInstruction {
-  ZydisMnemonic i = ZYDIS_MNEMONIC_INVALID;
-  ZydisBranchType b = ZYDIS_BRANCH_TYPE_NONE;
-
-  constexpr ReloInstruction(ZydisMnemonic mn, ZydisBranchType b)
-      : i(mn), b(b) {}
-  constexpr ReloInstruction(ZydisMnemonic mn) : i(mn) {}
-  constexpr ReloInstruction(ZydisDecodedInstruction instruction) {
-    if (instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE) {
-      i = ZYDIS_MNEMONIC_INVALID;
-      b = ZYDIS_BRANCH_TYPE_MAX_VALUE;
-    } else {
-      i = instruction.mnemonic;
-    }
-  }
-
-  bool operator==(const ReloInstruction &other) const {
-    return (this->i == other.i && this->b == other.b);
-  }
-};
-
-constexpr ReloInstruction JUMP_RELO_JMP_INSTRUCTION = {
-    ZYDIS_MNEMONIC_INVALID, ZYDIS_BRANCH_TYPE_MAX_VALUE};
-
-struct ReloInstructionHasher {
-  std::size_t operator()(const ReloInstruction &relo) const {
-    return relo.i << 16 | relo.b;
-  }
-};
-
-extern const std::unordered_map<ReloInstruction, RelocationMeta,
-                                ReloInstructionHasher>
-    relo_meta;
+const RelocationMeta &
+get_relocator_for_instruction(const ZydisDecodedInstruction &instruction);
 
 } // namespace spud::detail::x64
