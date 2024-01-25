@@ -19,7 +19,6 @@ struct Trampoline {
 using RelocationEntry = std::variant<x64::RelocationEntry>;
 
 struct RelocationInfo {
-  std::map<uintptr_t, uintptr_t> relocation_offset;
   std::vector<RelocationEntry> relocations;
 };
 

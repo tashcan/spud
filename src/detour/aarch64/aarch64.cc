@@ -51,24 +51,8 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
 
   return {relocation_info, jump_size};
 }
-size_t get_trampoline_size(std::span<uint8_t> target,
-                           const RelocationInfo &relocation_info) {
-  //
-  size_t required_space = target.size();
 
-  auto target_start = reinterpret_cast<uintptr_t>(target.data());
-  // for (const auto &relot : relocation_info.relocations) {
-  //   auto &relo = std::get<RelocationEntry>(relot);
-
-  //   auto &r_meta = relo_meta.at(relo.instruction);
-  //   required_space += r_meta.size;
-  // }
-  required_space += kAbsoluteJumpSize;
-  return required_space;
-}
-
-Trampoline create_trampoline(uintptr_t trampoline_address,
-                             uintptr_t return_address,
+Trampoline create_trampoline(uintptr_t return_address,
                              std::span<uint8_t> target,
                              const RelocationInfo &relocation_infos) {
   //
@@ -76,7 +60,7 @@ Trampoline create_trampoline(uintptr_t trampoline_address,
   using namespace asmjit::a64;
 
   CodeHolder code;
-  code.init(Environment{asmjit::Arch::kAArch64}, trampoline_address);
+  code.init(Environment{asmjit::Arch::kAArch64}, 0x0);
   Assembler assembler(&code);
 
   const auto target_start = reinterpret_cast<uintptr_t>(target.data());
