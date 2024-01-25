@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1696631632662,
+  "lastUpdate": 1706204630988,
   "repoUrl": "https://github.com/tashcan/spud",
   "entries": {
     "Detour Benchmark": [
@@ -464,6 +464,58 @@ window.BENCHMARK_DATA = {
             "name": "1GB search AVX2",
             "value": 148.075,
             "range": "± 5.27058",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "git@tashcan.com",
+            "name": "tashcan",
+            "username": "tashcan"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d586620d8a5007e0061042310d47acb38e0431f7",
+          "message": "Merge pull request #4 from tashcan/refactor/relocators\n\nRework x64 relocation to use a generic code path",
+          "timestamp": "2024-01-25T09:40:10-08:00",
+          "tree_id": "eafe613a00354db66d05a6d3dddbe3bb138de586",
+          "url": "https://github.com/tashcan/spud/commit/d586620d8a5007e0061042310d47acb38e0431f7"
+        },
+        "date": 1706204630026,
+        "tool": "catch2",
+        "benches": [
+          {
+            "name": "simple detour",
+            "value": 6.88307,
+            "range": "± 1.10469",
+            "unit": "us",
+            "extra": "100 samples\n5 iterations"
+          },
+          {
+            "name": "1GB search",
+            "value": 999.635,
+            "range": "± 5.36997",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
+          },
+          {
+            "name": "1GB search SSE 4.2",
+            "value": 77.1027,
+            "range": "± 1.13701",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
+          },
+          {
+            "name": "1GB search AVX2",
+            "value": 56.8697,
+            "range": "± 1.19166",
             "unit": "ms",
             "extra": "100 samples\n1 iterations"
           }
