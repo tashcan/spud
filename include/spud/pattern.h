@@ -71,11 +71,14 @@ private:
   std::vector<detail::PatternResult> result;
 };
 
+PatternMatches find_matches(std::string_view pattern,
+                            std::span<uint8_t> search_buffer,
+                            uint32_t features = cpu_feature::FEATURE_ALL);
+
 #if SPUD_OS_WIN
 PatternMatches find_in_module(std::string_view pattern,
                               std::string_view module = {},
                               uint32_t features = cpu_feature::FEATURE_ALL);
-#else
 #endif
 
 } // namespace spud

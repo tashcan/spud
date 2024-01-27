@@ -15,6 +15,8 @@
 #include <intrin.h>
 #endif
 
+// TODO: clean this up
+// private define
 #if SPUD_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -126,6 +128,19 @@ std::vector<PatternResult> find_matches(std::string_view mask,
   return results;
 }
 } // namespace detail
+
+PatternMatches find_matches(std::string_view pattern,
+                            std::span<uint8_t> search_buffer,
+                            uint32_t features) {
+  std::string mask;
+  std::string data;
+  detail::generate_mask_and_data(pattern, mask, data);
+
+  std::vector<detail::PatternResult> results;
+  auto matches = detail::find_matches(mask, data, search_buffer, features);
+  results.insert(results.end(), matches.begin(), matches.end());
+  return results;
+}
 
 #if SPUD_OS_WIN
 PatternMatches find_in_module(std::string_view pattern, std::string_view module,
