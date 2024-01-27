@@ -16,9 +16,9 @@ export default defineConfig({
 						{ label: 'Getting Started', link: '/guides/getting-started/' },
 						{ label: 'Detour', link: '/guides/detour/' },
 						{ label: 'Pattern Search', link: '/guides/pattern-search/' },
-						{ label: 'Memory Manipulation', link: '/guides/memory/' },
-						{ label: 'VTable Patching', link: '/guides/vtable/' },
-						{ label: 'Import Table Patching', link: '/guides/import-table/' },
+						// { label: 'Memory Manipulation', link: '/guides/memory/' },
+						// { label: 'VTable Patching', link: '/guides/vtable/' },
+						// { label: 'Import Table Patching', link: '/guides/import-table/' },
 					],
 				},
 				{
