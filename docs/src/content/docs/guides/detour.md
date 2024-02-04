@@ -4,7 +4,9 @@ description: Introduction to detouring a function.
 ---
 
 Spud is a library for intercepting binary functions on `ARM64`, and `X64` machines.  
-Interception code is applied dynamically at runtime. Spud replaces the first few instructions of the target function with an unconditional jump to the user-provided detour function. Instructions from the target function are placed in a trampoline. The address of the trampoline is placed in a target pointer. The detour function can either replace the target function or extend its semantics by invoking the target function as a subroutine through the target pointer to the trampoline.
+Interception code is applied dynamically at runtime. Spud replaces the first few instructions of the target function with an unconditional jump to the user-provided detour function.  
+Instructions from the target function are placed in a trampoline. The address of the trampoline is placed in a target pointer.  
+The detour function can either replace the target function or extend its semantics by invoking the target function as a subroutine through the target pointer to the trampoline.
 
 Detours are inserted at execution time. The code of the target function is modified in memory, not on disk, thus enabling interception of binary functions at a very fine granularity. For example, the procedures in a DLL can be detoured in one execution of an application, while the original procedures are not detoured in another execution running at the same time. Unlike DLL re-linking or static redirection, the interception techniques used in the Spud library are guaranteed to work regardless of the method used by application or system code to locate the target function.
 

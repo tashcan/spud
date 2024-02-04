@@ -15,16 +15,16 @@ export default defineConfig({
 					items: [
 						{ label: 'Getting Started', link: '/guides/getting-started/' },
 						{ label: 'Detour', link: '/guides/detour/' },
-						{ label: 'Pattern Search', link: '/guides/pattern-search/' },
+						{ label: 'signature Search', link: '/guides/signature-search/' },
 						// { label: 'Memory Manipulation', link: '/guides/memory/' },
 						// { label: 'VTable Patching', link: '/guides/vtable/' },
 						// { label: 'Import Table Patching', link: '/guides/import-table/' },
 					],
 				},
-				{
-					label: 'Reference',
-					autogenerate: { directory: 'reference' },
-				},
+				// {
+				// 	label: 'Reference',
+				// 	autogenerate: { directory: 'reference' },
+				// },
 			],
 			customCss: [
 				// Relative path to your custom CSS file
