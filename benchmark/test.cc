@@ -5,7 +5,7 @@
 
 #include <spud/arch.h>
 #include <spud/detour.h>
-#include <spud/pattern.h>
+#include <spud/signature.h>
 
 static bool hook_ran = false;
 static bool condition_intact_for_hook = false;
@@ -53,7 +53,7 @@ TEST_CASE("detour", "[benchmark]") {
   };
 }
 
-TEST_CASE("pattern search", "[benchmark]") {
+TEST_CASE("signature search", "[benchmark]") {
   constexpr auto BUFFER_SIZE = 1 * 1024 * 1024 * 1024;
 
   std::vector<uint8_t> search_buffer;
@@ -71,11 +71,11 @@ TEST_CASE("pattern search", "[benchmark]") {
   search_buffer[i + 7] = 0x54;
   search_buffer[i + 8] = 0x24;
 
-  const auto pattern = "4C 89 44 24 ? 48 89 54 24";
+  constexpr auto signature = "4C 89 44 24 ? 48 89 54 24";
 
   std::string mask;
   std::string data;
-  spud::detail::generate_mask_and_data(pattern, mask, data);
+  spud::detail::generate_mask_and_data(signature, mask, data);
 
   BENCHMARK_ADVANCED("1GB search")(Catch::Benchmark::Chronometer meter) {
     meter.measure([&] {

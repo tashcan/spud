@@ -1,5 +1,5 @@
 #include <spud/arch.h>
-#include <spud/pattern.h>
+#include <spud/signature.h>
 
 #include <array>
 #include <bit>
@@ -33,9 +33,9 @@
 
 namespace spud {
 namespace detail {
-void generate_mask_and_data(std::string_view pattern, std::string &mask,
+void generate_mask_and_data(std::string_view signature, std::string &mask,
                             std::string &data) {
-  for (auto ch = pattern.begin(); ch != pattern.end(); ++ch) {
+  for (auto ch = signature.begin(); ch != signature.end(); ++ch) {
     if (*ch == '?') {
       data += '\0';
       mask += '?';
@@ -72,13 +72,13 @@ static void run_cpuid(uint32_t eax, uint32_t ecx, uint32_t *abcd) {
 
 void find_matches_sse(std::string_view mask, std::string_view data,
                       size_t buffer_end, std::span<uint8_t> search_buffer,
-                      std::vector<PatternResult> &results);
+                      std::vector<signature_result> &results);
 
 void find_matches_avx2(std::string_view mask, std::string_view data,
                        size_t buffer_end, std::span<uint8_t> search_buffer,
-                       std::vector<PatternResult> &results);
+                       std::vector<signature_result> &results);
 
-std::vector<PatternResult> find_matches(std::string_view mask,
+std::vector<signature_result> find_matches(std::string_view mask,
                                         std::string_view data,
                                         std::span<uint8_t> search_buffer,
                                         uint32_t features) {
@@ -99,7 +99,7 @@ std::vector<PatternResult> find_matches(std::string_view mask,
 
   const auto buffer_end = search_buffer.size() - mask.size();
 
-  std::vector<PatternResult> results;
+  std::vector<signature_result> results;
 
   const bool want_avx2 = ((features & FEATURE_AVX2) != 0);
   const bool want_sse42 = ((features & FEATURE_SSE42) != 0);
@@ -120,7 +120,7 @@ std::vector<PatternResult> find_matches(std::string_view mask,
   } else {
     for (size_t offset = 0; offset < buffer_end; ++offset) {
       if (does_match(offset)) {
-        results.emplace_back(PatternResult{search_buffer, offset});
+        results.emplace_back(signature_result{search_buffer, offset});
       }
     }
   }
@@ -129,21 +129,21 @@ std::vector<PatternResult> find_matches(std::string_view mask,
 }
 } // namespace detail
 
-PatternMatches find_matches(std::string_view pattern,
+signature_matches find_matches(std::string_view signature,
                             std::span<uint8_t> search_buffer,
                             uint32_t features) {
   std::string mask;
   std::string data;
-  detail::generate_mask_and_data(pattern, mask, data);
+  detail::generate_mask_and_data(signature, mask, data);
 
-  std::vector<detail::PatternResult> results;
+  std::vector<detail::signature_result> results;
   auto matches = detail::find_matches(mask, data, search_buffer, features);
   results.insert(results.end(), matches.begin(), matches.end());
   return results;
 }
 
 #if SPUD_OS_WIN
-PatternMatches find_in_module(std::string_view pattern, std::string_view module,
+signature_matches find_in_module(std::string_view signature, std::string_view module,
                               uint32_t features) {
   std::vector<std::span<uint8_t>> sections;
 
@@ -176,9 +176,9 @@ PatternMatches find_in_module(std::string_view pattern, std::string_view module,
 
   std::string mask;
   std::string data;
-  detail::generate_mask_and_data(pattern, mask, data);
+  detail::generate_mask_and_data(signature, mask, data);
 
-  std::vector<detail::PatternResult> results;
+  std::vector<detail::signature_result> results;
   for (auto &section : sections) {
     auto matches = detail::find_matches(mask, data, section, features);
     results.insert(results.end(), matches.begin(), matches.end());

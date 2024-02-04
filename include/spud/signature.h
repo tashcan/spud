@@ -19,22 +19,22 @@ enum cpu_feature : uint32_t {
 
 namespace detail {
 
-struct PatternResult {
+struct signature_result {
   std::span<uint8_t> buffer;
   uintptr_t offset;
 };
 
-void generate_mask_and_data(std::string_view pattern, std::string &mask,
+void generate_mask_and_data(std::string_view signature, std::string &mask,
                             std::string &data);
-std::vector<PatternResult>
+std::vector<signature_result>
 find_matches(std::string_view mask, std::string_view data,
              std::span<uint8_t> search_buffer,
              uint32_t features = cpu_feature::FEATURE_ALL);
 } // namespace detail
 
-struct PatternMatches {
-  struct PatternMatch {
-    PatternMatch(detail::PatternResult result, size_t offset = 0)
+struct signature_matches {
+  struct signature_match {
+    signature_match(detail::signature_result result, size_t offset = 0)
         : result(result), adjustment(offset) {}
 
     uintptr_t address() const {
@@ -47,7 +47,7 @@ struct PatternMatches {
              *reinterpret_cast<int32_t *>(data + 1u) + 5ul;
     }
 
-    PatternMatch adjust(size_t offset) {
+    signature_match adjust(size_t offset) {
       return {result, adjustment + offset};
     }
 
@@ -56,27 +56,27 @@ struct PatternMatches {
       return result.offset + adjustment;
     }
 
-    detail::PatternResult result;
+    detail::signature_result result;
     uintptr_t adjustment = 0;
   };
 
-  PatternMatch get(size_t index) {
+  signature_match get(size_t index) {
     return result[index];
   }
 
-  PatternMatches(std::vector<detail::PatternResult> result = {})
+  signature_matches(std::vector<detail::signature_result> result = {})
       : result(result) {}
 
 private:
-  std::vector<detail::PatternResult> result;
+  std::vector<detail::signature_result> result;
 };
 
-PatternMatches find_matches(std::string_view pattern,
+signature_matches find_matches(std::string_view signature,
                             std::span<uint8_t> search_buffer,
                             uint32_t features = cpu_feature::FEATURE_ALL);
 
 #if SPUD_OS_WIN
-PatternMatches find_in_module(std::string_view pattern,
+signature_matches find_in_module(std::string_view signature,
                               std::string_view module = {},
                               uint32_t features = cpu_feature::FEATURE_ALL);
 #endif

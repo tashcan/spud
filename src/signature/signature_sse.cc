@@ -1,5 +1,5 @@
 #include <spud/arch.h>
-#include <spud/pattern.h>
+#include <spud/signature.h>
 
 #include <bit>
 #include <span>
@@ -16,7 +16,7 @@ namespace detail {
 
 void find_matches_sse(std::string_view mask, std::string_view data,
                       size_t buffer_end, std::span<uint8_t> search_buffer,
-                      std::vector<PatternResult> &results) {
+                      std::vector<signature_result> &results) {
   const auto does_match = [&](uintptr_t offset) {
     for (size_t i = 0; i < mask.size(); ++i) {
       if (mask[i] == '?')
@@ -35,12 +35,12 @@ void find_matches_sse(std::string_view mask, std::string_view data,
   __m128i first = _mm_set1_epi8(0);
   __m128i second = _mm_set1_epi8(0);
 
-  const auto pattern_size = std::min(mask.size(), size_t(16));
+  const auto signature_size = std::min(mask.size(), size_t(16));
 
   size_t spread = 0;
   size_t first_i = 0;
 
-  for (size_t i = 0; i < pattern_size; ++i) {
+  for (size_t i = 0; i < signature_size; ++i) {
     if (mask[i] != '?') {
       first = _mm_set1_epi8(data[i]);
       first_i = i;
@@ -48,7 +48,7 @@ void find_matches_sse(std::string_view mask, std::string_view data,
     }
   }
 
-  for (size_t i = pattern_size - 1; i >= 0; --i) {
+  for (size_t i = signature_size - 1; i >= 0; --i) {
     if (mask[i] != '?') {
       second = _mm_set1_epi8(data[i]);
       spread = i - first_i;
@@ -72,7 +72,7 @@ void find_matches_sse(std::string_view mask, std::string_view data,
       const auto bit_pos = std::countr_zero(mm_mask);
       if (does_match(offset + bit_pos)) {
         results.emplace_back(
-            PatternResult{search_buffer, uintptr_t(offset + bit_pos)});
+            signature_result{search_buffer, uintptr_t(offset + bit_pos)});
       }
       mm_mask = mm_mask & (mm_mask - 1);
     }
@@ -81,7 +81,7 @@ void find_matches_sse(std::string_view mask, std::string_view data,
   // Scan the remainder
   for (size_t offset = end; offset < buffer_end; ++offset) {
     if (does_match(offset)) {
-      results.emplace_back(PatternResult{search_buffer, offset});
+      results.emplace_back(signature_result{search_buffer, offset});
     }
   }
 }

@@ -159,7 +159,7 @@ target_sources("spud"
     "src/detour/remapper.cc"
     "src/detour/remapper.h"
     "src/memory/protection.cc"
-    "src/pattern/pattern.cc"
+    "src/signature/signature.cc"
     "${ASM_SRCS}"
     "${SPUD_SSE_SRCS}"
     "${SPUD_AVX2_SRCS}"
@@ -230,7 +230,7 @@ FetchContent_MakeAvailable(PolyHook2)
 
 endif()
 
-add_executable("spud.test" ${TEST_SRCS} "tests/test_util.h" "tests/pattern.cc")
+add_executable("spud.test" ${TEST_SRCS} "tests/test_util.h" "tests/signature.cc")
 target_include_directories("spud.test" PRIVATE "tests")
 target_link_libraries("spud.test" PRIVATE "Catch2" "Catch2::Catch2WithMain" "spud")
 add_dependencies("spud.test" "Catch2" "spud")
