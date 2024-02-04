@@ -34,8 +34,8 @@ static void write_adjusted_target(auto size, auto target_code, auto target) {
   }
 }
 
-void write_absolute_address(auto target, auto &relo, auto data_label,
-                            Assembler &assembler, auto &) {
+static void write_absolute_address(auto target, auto &relo, auto data_label,
+                                   Assembler &assembler, auto &) {
   auto target_start = reinterpret_cast<uintptr_t>(target.data());
   ZyanU64 absolute_target = 0;
   for (auto i = 0; i < relo.instruction.operand_count; ++i) {
@@ -72,27 +72,24 @@ const static RelocationMeta generic_relocator = {
           &instruction, operands.data(), instruction.operand_count_visible,
           &request);
       asmjit::x86::Gpq scratch_register = r11;
+      ZydisEncoderOperand *register_operand = nullptr;
       if (request.operands[0].type == ZYDIS_OPERAND_TYPE_MEMORY) {
         req_operand = &request.operands[0];
-        if (request.operands[1].type == ZYDIS_OPERAND_TYPE_REGISTER) {
-          if (request.operands[1].reg.value == ZYDIS_REGISTER_R11 ||
-              request.operands[1].reg.value == ZYDIS_REGISTER_R11B ||
-              request.operands[1].reg.value == ZYDIS_REGISTER_R11D ||
-              request.operands[1].reg.value == ZYDIS_REGISTER_R11W) {
-            scratch_register = r10;
-          }
-        }
+        register_operand = &request.operands[1];
       } else {
         req_operand = &request.operands[1];
-        if (request.operands[0].type == ZYDIS_OPERAND_TYPE_REGISTER) {
-          if (request.operands[0].reg.value == ZYDIS_REGISTER_R11 ||
-              request.operands[0].reg.value == ZYDIS_REGISTER_R11B ||
-              request.operands[0].reg.value == ZYDIS_REGISTER_R11D ||
-              request.operands[0].reg.value == ZYDIS_REGISTER_R11W) {
-            scratch_register = r10;
-          }
+        register_operand = &request.operands[0];
+      }
+
+      if (register_operand->type == ZYDIS_OPERAND_TYPE_REGISTER) {
+        if (register_operand->reg.value == ZYDIS_REGISTER_R11 ||
+            register_operand->reg.value == ZYDIS_REGISTER_R11B ||
+            register_operand->reg.value == ZYDIS_REGISTER_R11D ||
+            register_operand->reg.value == ZYDIS_REGISTER_R11W) {
+          scratch_register = r10;
         }
       }
+
       req_operand->type = ZYDIS_OPERAND_TYPE_MEMORY;
       req_operand->mem.base =
           scratch_register == r11 ? ZYDIS_REGISTER_R11 : ZYDIS_REGISTER_R10;

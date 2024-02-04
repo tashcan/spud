@@ -53,10 +53,11 @@ detail::detour &detour::install(Arch arch) {
   // We don't want to hook things that point to a direct jump
   // This will resolve that jump and instead we hook the underlying function
   // func_ = impl.maybe_resolve_jump(func_);
+  // TODO(alex): This will break hook stacking most likely right now...
   address_ = impl.maybe_resolve_jump(address_);
   wrapper_ = impl.maybe_resolve_jump(wrapper_);
 
-  auto jump = impl.create_absolute_jump(
+  const auto jump = impl.create_absolute_jump(
       wrapper_, reinterpret_cast<uintptr_t>(context_container_.get()));
 
   auto [relocation_infos, required_trampoline_size] =
@@ -121,12 +122,12 @@ detail::detour &detour::install(Arch arch) {
 }
 
 void detour::remove() {
+  assert(context_container_.get() != nullptr);
   if (original_func_data_.size() == 0) {
     return;
   }
 
   disable_jit_write_protection();
-
   {
     Remapper remap(address_, original_func_data_.size());
     {
@@ -137,6 +138,7 @@ void detour::remove() {
     }
   }
   enable_jit_write_protection();
+
   original_func_data_.clear();
 }
 

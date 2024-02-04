@@ -120,11 +120,11 @@ public:
   using Self = detour<R(R (*)(Args...), Args...)>;
   using WrapperArgs = std::tuple<Self *, Args...>;
 
-  static R wrapper(Args... args) {
+  static inline R wrapper(Args... args) {
     const auto context = reinterpret_cast<ContextContainer *>(
         detail::detour::get_context_value());
-    return ((func_t *)context->func)((trampoline_t *)context->trampoline,
-                                     args...);
+    return (reinterpret_cast<func_t *>(context->func))(
+        reinterpret_cast<trampoline_t *>(context->trampoline), args...);
   };
 #if __cpp_lib_source_location && SPUD_DETOUR_TRACING
   template <detail::Address T, detail::Address F>
