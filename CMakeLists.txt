@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.23 FATAL_ERROR)
 
 if (WIN32)
-project(spud C CXX ASM_MASM 1.0.0)
+project(spud C CXX ASM_MASM)
 else()
-project(spud C CXX ASM 1.0.0)
+project(spud C CXX ASM)
 endif(WIN32)
 SET(CMAKE_ASM_FLAGS "${CFLAGS} -x assembler-with-cpp")
 
