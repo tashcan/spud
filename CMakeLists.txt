@@ -12,7 +12,7 @@ include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CXX_STANDARD_REQUIRED ON)
-# set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 set(ASMJIT_STATIC TRUE)
 
 option(SPUD_COMPARE_LIBS "" OFF)
@@ -41,7 +41,7 @@ if (NOT TARGET asmjit)
 FetchContent_Declare(
   asmjit
   GIT_REPOSITORY https://github.com/asmjit/asmjit.git
-  GIT_TAG        origin/master 
+  GIT_TAG        origin/master
 )
 
 FetchContent_MakeAvailable(asmjit)
@@ -82,7 +82,9 @@ set(SPUD_PUBLIC_HDRS
 target_sources("spud" PUBLIC FILE_SET public_headers TYPE HEADERS BASE_DIRS "include" FILES ${SPUD_PUBLIC_HDRS})
 target_include_directories("spud" PUBLIC "include" PRIVATE "src")
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch")
+
+message("${CMAKE_SYSTEM_PROCESSOR}")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch" OR CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64")
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         set(ARCH "arm64")
     else()
@@ -123,7 +125,11 @@ if(CMAKE_OSX_ARCHITECTURES)
 endif()
 
 if (WIN32)
-    file(GLOB_RECURSE ASM_SRCS src/detour/x86_64/*.asm)
+    if (ARCH MATCHES "arm64")
+        file(GLOB_RECURSE ASM_SRCS src/detour/aarch64/*.asm)
+    else()
+        file(GLOB_RECURSE ASM_SRCS src/detour/x86_64/*.asm)
+    endif()
 else()
     if (ARCH MATCHES "arm64")
         file(GLOB_RECURSE ASM_SRCS src/detour/aarch64/*.S)
@@ -132,8 +138,12 @@ else()
     endif()
 endif(WIN32)
 
+if (ARCH MATCHES "arm64")
+file(GLOB_RECURSE SPUD_NEON_SRCS src/*_neon.cc)
+else()
 file(GLOB_RECURSE SPUD_SSE_SRCS src/*_sse.cc)
 file(GLOB_RECURSE SPUD_AVX2_SRCS src/*_avx2.cc)
+endif()
 
 if (MSVC)
     SET_SOURCE_FILES_PROPERTIES(${SPUD_AVX2_SRCS} PROPERTIES COMPILE_FLAGS "/arch:AVX2")
@@ -163,6 +173,7 @@ target_sources("spud"
     "${ASM_SRCS}"
     "${SPUD_SSE_SRCS}"
     "${SPUD_AVX2_SRCS}"
+    "${SPUD_NEON_SRCS}"
 )
 
 if (NOT SPUD_NO_INSTALL)
@@ -178,7 +189,13 @@ endif()
 if(SPUD_BUILD_TESTS)
 
 if (WIN32)
+
+if (ARCH MATCHES "arm64")
+file(GLOB_RECURSE TEST_SRCS tests/arm64/*.cc tests/arm64/*.h tests/arm64/*.asm)
+else()
 file(GLOB_RECURSE TEST_SRCS tests/x86_64/*.cc tests/x86_64/*.h tests/x86_64/*.asm)
+endif()
+
 else()
 
 if (ARCH MATCHES "arm64")

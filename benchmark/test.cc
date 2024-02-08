@@ -77,13 +77,14 @@ TEST_CASE("signature search", "[benchmark]") {
   std::string data;
   spud::detail::generate_mask_and_data(signature, mask, data);
 
-  BENCHMARK_ADVANCED("1GB search")(Catch::Benchmark::Chronometer meter) {
-    meter.measure([&] {
-      const auto result = spud::detail::find_matches(
-          mask, data, search_buffer, spud::cpu_feature::FEATURE_NONE);
-    });
-  };
+  // BENCHMARK_ADVANCED("1GB search")(Catch::Benchmark::Chronometer meter) {
+  //   meter.measure([&] {
+  //     const auto result = spud::detail::find_matches(
+  //         mask, data, search_buffer, spud::cpu_feature::FEATURE_NONE);
+  //   });
+  // };
 
+#if SPUD_ARCH_X86_FAMILY
   BENCHMARK_ADVANCED("1GB search SSE 4.2")
   (Catch::Benchmark::Chronometer meter) {
     meter.measure([&] {
@@ -99,4 +100,13 @@ TEST_CASE("signature search", "[benchmark]") {
           mask, data, search_buffer, spud::cpu_feature::FEATURE_AVX2);
     });
   };
+#else
+  BENCHMARK_ADVANCED("1GB search NEON")
+  (Catch::Benchmark::Chronometer meter) {
+    meter.measure([&] {
+      const auto result = spud::detail::find_matches(
+          mask, data, search_buffer, spud::cpu_feature::FEATURE_NEON);
+    });
+  };
+#endif
 }

@@ -10,9 +10,11 @@
 #include <string_view>
 #include <vector>
 
+#if SPUD_ARCH_X86_FAMILY
 #include <immintrin.h>
 #if SPUD_OS_WIN
 #include <intrin.h>
+#endif
 #endif
 
 // TODO: clean this up
@@ -48,6 +50,7 @@ void generate_mask_and_data(std::string_view signature, std::string &mask,
   }
 }
 
+#if SPUD_ARCH_X86_FAMILY
 // TODO: This should be elsewhere
 static void run_cpuid(uint32_t eax, uint32_t ecx, uint32_t *abcd) {
 #if defined(_MSC_VER)
@@ -77,11 +80,16 @@ void find_matches_sse(std::string_view mask, std::string_view data,
 void find_matches_avx2(std::string_view mask, std::string_view data,
                        size_t buffer_end, std::span<uint8_t> search_buffer,
                        std::vector<signature_result> &results);
+#elif SPUD_ARCH_ARM_FAMILY
+void find_matches_neon(std::string_view mask, std::string_view data,
+                       size_t buffer_end, std::span<uint8_t> search_buffer,
+                       std::vector<signature_result> &results);
+#endif
 
 std::vector<signature_result> find_matches(std::string_view mask,
-                                        std::string_view data,
-                                        std::span<uint8_t> search_buffer,
-                                        uint32_t features) {
+                                           std::string_view data,
+                                           std::span<uint8_t> search_buffer,
+                                           uint32_t features) {
   const auto does_match = [&](uintptr_t offset) {
     for (size_t i = 0; i < mask.size(); ++i) {
       if (mask[i] == '?')
@@ -101,6 +109,7 @@ std::vector<signature_result> find_matches(std::string_view mask,
 
   std::vector<signature_result> results;
 
+#if SPUD_ARCH_X86_FAMILY
   const bool want_avx2 = ((features & FEATURE_AVX2) != 0);
   const bool want_sse42 = ((features & FEATURE_SSE42) != 0);
 
@@ -117,6 +126,11 @@ std::vector<signature_result> find_matches(std::string_view mask,
     find_matches_avx2(mask, data, buffer_end, search_buffer, results);
   } else if (do_sse42) {
     find_matches_sse(mask, data, buffer_end, search_buffer, results);
+#elif SPUD_ARCH_ARM_FAMILY
+  const auto do_neon = true;
+  if (do_neon) {
+    find_matches_neon(mask, data, buffer_end, search_buffer, results);
+#endif
   } else {
     for (size_t offset = 0; offset < buffer_end; ++offset) {
       if (does_match(offset)) {
@@ -130,8 +144,8 @@ std::vector<signature_result> find_matches(std::string_view mask,
 } // namespace detail
 
 signature_matches find_matches(std::string_view signature,
-                            std::span<uint8_t> search_buffer,
-                            uint32_t features) {
+                               std::span<uint8_t> search_buffer,
+                               uint32_t features) {
   std::string mask;
   std::string data;
   detail::generate_mask_and_data(signature, mask, data);
@@ -143,8 +157,8 @@ signature_matches find_matches(std::string_view signature,
 }
 
 #if SPUD_OS_WIN
-signature_matches find_in_module(std::string_view signature, std::string_view module,
-                              uint32_t features) {
+signature_matches find_in_module(std::string_view signature,
+                                 std::string_view module, uint32_t features) {
   std::vector<std::span<uint8_t>> sections;
 
   const auto module_handle = reinterpret_cast<uintptr_t>(
