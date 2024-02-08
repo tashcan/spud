@@ -188,23 +188,38 @@ endif()
 
 if(SPUD_BUILD_TESTS)
 
+
+set(TEST_SRCS "tests/signature.cc")
+
+file(GLOB_RECURSE TEST_DETOUR_SHARED_SRCS tests/detour/shared/*.cc tests/detour/shared/*.h)
+list (APPEND TEST_SRCS ${TEST_DETOUR_SHARED_SRCS})
+
+if (ARCH MATCHES "arm64")
+file(GLOB_RECURSE TEST_DETOUR_SRCS tests/detour/aarch64/*.cc tests/detour/arm64/*.h)
+else()
+file(GLOB_RECURSE TEST_DETOUR_SRCS tests/detour/x86_64/*.cc tests/detour/x86_64/*.h)
+endif()
+
 if (WIN32)
 
 if (ARCH MATCHES "arm64")
-file(GLOB_RECURSE TEST_SRCS tests/arm64/*.cc tests/arm64/*.h tests/arm64/*.asm)
+file(GLOB_RECURSE TEST_ASM_SRCS tests/detour/arm64/*.asm)
 else()
-file(GLOB_RECURSE TEST_SRCS tests/x86_64/*.cc tests/x86_64/*.h tests/x86_64/*.asm)
+file(GLOB_RECURSE TEST_ASM_SRCS tests/detour/x86_64/*.asm)
 endif()
 
-else()
+else(WIN32)
 
 if (ARCH MATCHES "arm64")
-file(GLOB_RECURSE TEST_SRCS tests/arm64/*.cc tests/arm64/*.h tests/arm64/*.S)
+file(GLOB_RECURSE TEST_ASM_SRCS tests/detour/arm64/*.S)
 else()
-file(GLOB_RECURSE TEST_SRCS tests/x86_64/*.cc tests/x86_64/*.h tests/x86_64/*.S)
+file(GLOB_RECURSE TEST_ASM_SRCS tests/detour/x86_64/*.S)
 endif()
 
 endif(WIN32)
+
+list (APPEND TEST_SRCS ${TEST_DETOUR_SRCS})
+list (APPEND TEST_SRCS ${TEST_ASM_SRCS})
 
 file(GLOB_RECURSE BENCHMARK_SRCS benchmark/*.cc)
 
