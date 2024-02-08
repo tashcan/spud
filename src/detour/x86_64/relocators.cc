@@ -54,11 +54,11 @@ static void write_absolute_address(auto target, auto &relo, auto data_label,
   }
 }
 
-const static RelocationMeta generic_relocator = {
+const static relocation_meta generic_relocator = {
     .size = sizeof(uintptr_t),
     .gen_relo_data = write_absolute_address,
-    .gen_relo_code = [](std::span<uint8_t>, const RelocationEntry &relo,
-                        const RelocationInfo &, asmjit::Label relocation_data,
+    .gen_relo_code = [](std::span<uint8_t>, const relocation_entry &relo,
+                        const relocation_info &, asmjit::Label relocation_data,
                         asmjit::x86::Assembler &assembler) {
       auto instruction = relo.instruction;
       auto operands = relo.operands;
@@ -115,7 +115,7 @@ const static RelocationMeta generic_relocator = {
       }
     }};
 
-const static RelocationMeta jump_relocator = {
+const static relocation_meta jump_relocator = {
     .size = sizeof(uintptr_t),
     .gen_relo_data =
         [](auto target, auto &relo, auto data_label,
@@ -138,24 +138,24 @@ const static RelocationMeta jump_relocator = {
             assert(false && "Failed to calculate absolute target jump address");
           }
         },
-    .gen_relo_code = [](std::span<uint8_t>, const RelocationEntry &,
-                        const RelocationInfo &, asmjit::Label,
+    .gen_relo_code = [](std::span<uint8_t>, const relocation_entry &,
+                        const relocation_info &, asmjit::Label,
                         asmjit::x86::Assembler &) {},
     .copy_instruction = true};
 
-const static RelocationMeta lea_relocator = {
+const static relocation_meta lea_relocator = {
     .size = sizeof(uintptr_t),
     .gen_relo_data = write_absolute_address,
     .gen_relo_code =
-        [](std::span<uint8_t>, const RelocationEntry &relo,
-           const RelocationInfo &, asmjit::Label relocation_data,
+        [](std::span<uint8_t>, const relocation_entry &relo,
+           const relocation_info &, asmjit::Label relocation_data,
            asmjit::x86::Assembler &assembler) {
           assembler.mov(zydis_reg_to_asmjit(relo.operands[0].reg.value),
                         qword_ptr(relocation_data));
         },
     .copy_instruction = false};
 
-const RelocationMeta &
+const relocation_meta &
 get_relocator_for_instruction(const ZydisDecodedInstruction &instruction) {
   if (instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE) {
     return jump_relocator;

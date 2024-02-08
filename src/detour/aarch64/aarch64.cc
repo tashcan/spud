@@ -42,19 +42,19 @@ std::vector<uint8_t> create_absolute_jump(uintptr_t target_address,
   return {buffer.begin(), buffer.end()};
 }
 
-std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
+std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
                                                        size_t jump_size) {
 
-  RelocationInfo relocation_info;
+  relocation_info relocation_info;
 
   // Fill
 
   return {relocation_info, jump_size};
 }
 
-Trampoline create_trampoline(uintptr_t return_address,
+trampoline_buffer create_trampoline(uintptr_t return_address,
                              std::span<uint8_t> target,
-                             const RelocationInfo &relocation_infos) {
+                             const relocation_info &relocation_infos) {
   //
   using namespace asmjit;
   using namespace asmjit::a64;

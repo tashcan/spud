@@ -10,7 +10,7 @@
 #include <cassert>
 
 namespace spud::detail {
-Remapper::Remapper(uintptr_t address, size_t size)
+remapper::remapper(uintptr_t address, size_t size)
     : address_(address), size_(size) {
 #if SPUD_OS_APPLE
   mach_vm_address_t remap = 0;
@@ -25,7 +25,7 @@ Remapper::Remapper(uintptr_t address, size_t size)
 #endif
 }
 
-Remapper::~Remapper() {
+remapper::~remapper() {
 #if SPUD_OS_APPLE
   mach_vm_address_t addr = address_;
   vm_prot_t cur, max;

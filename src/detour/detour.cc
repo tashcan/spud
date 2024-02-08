@@ -25,11 +25,11 @@ namespace detail {
 struct DetourImpl {
   std::vector<uint8_t> (*create_absolute_jump)(uintptr_t target,
                                                uintptr_t data);
-  std::tuple<RelocationInfo, size_t> (*collect_relocations)(uintptr_t address,
+  std::tuple<relocation_info, size_t> (*collect_relocations)(uintptr_t address,
                                                             size_t jump_size);
-  Trampoline (*create_trampoline)(uintptr_t return_address,
+  trampoline_buffer (*create_trampoline)(uintptr_t return_address,
                                   std::span<uint8_t> target,
-                                  const RelocationInfo &relocation_infos);
+                                  const relocation_info &relocation_infos);
   uintptr_t (*maybe_resolve_jump)(uintptr_t) = [](auto v) { return v; };
 };
 
@@ -95,9 +95,8 @@ detail::detour &detour::install(Arch arch) {
     original_func_data_.resize(copy_size);
     std::memcpy(original_func_data_.data(), reinterpret_cast<void *>(address_),
                 copy_size);
-    auto jump_data = jump.data();
 
-    Remapper remap(address_, copy_size);
+    remapper remap(address_, copy_size);
     {
       SPUD_SCOPED_PROTECTION(remap, copy_size,
                              mem_protection::READ_WRITE_EXECUTE);
@@ -129,7 +128,7 @@ void detour::remove() {
 
   disable_jit_write_protection();
   {
-    Remapper remap(address_, original_func_data_.size());
+    remapper remap(address_, original_func_data_.size());
     {
       SPUD_SCOPED_PROTECTION(remap, original_func_data_.size(),
                              mem_protection::READ_WRITE_EXECUTE);

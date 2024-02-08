@@ -40,10 +40,10 @@ struct RelocationResult {
 
 static RelocationResult
 do_far_relocations(std::span<uint8_t> target,
-                   const RelocationInfo &relocation_info,
+                   const relocation_info &relocation_info,
                    asmjit::CodeHolder &code, asmjit::x86::Assembler &assembler);
 static void write_relocation_data(
-    std::span<uint8_t> target, const RelocationInfo &relocation_info,
+    std::span<uint8_t> target, const relocation_info &relocation_info,
     std::vector<asmjit::Label> relocation_data,
     std::vector<std::pair<uintptr_t, uintptr_t>> relocation_offsets,
     asmjit::CodeHolder &code, asmjit::x86::Assembler &assembler);
@@ -115,7 +115,7 @@ static inline bool DecodeInstruction(const ZydisDecoder *decoder,
   return true;
 }
 
-std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
+std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
                                                        size_t jump_size) {
   //
   // Create a temp absolute jump
@@ -140,14 +140,12 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
   uintptr_t decoder_offset = 0;
   intptr_t decode_length = 0x40;
 
-  RelocationInfo relocation_info;
+  relocation_info relocation_info;
 
   uintptr_t extend_trampoline_to = 0;
 
-  std::vector<RelocationEntry> relocations;
+  std::vector<relocation_entry> relocations;
   relocations.reserve(10);
-
-  constexpr auto kRuntimeAddress = 0x0;
 
   ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
   while (decode_length >= 0 &&
@@ -157,7 +155,7 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
 
     if (needs_relocate(decoder_offset, extend_trampoline_to, jump_size,
                        instruction, operands)) {
-      const auto entry = RelocationEntry{
+      const auto entry = relocation_entry{
           decoder_offset, instruction,
           std::array{operands[0], operands[1], operands[2], operands[3],
                      operands[4], operands[5], operands[6], operands[7],
@@ -206,9 +204,9 @@ std::tuple<RelocationInfo, size_t> collect_relocations(uintptr_t address,
   return {relocation_info, extend_trampoline_to};
 }
 
-Trampoline create_trampoline(uintptr_t return_address,
+trampoline_buffer create_trampoline(uintptr_t return_address,
                              std::span<uint8_t> target,
-                             const RelocationInfo &relocations) {
+                             const relocation_info &relocations) {
   using namespace asmjit;
   using namespace asmjit::x86;
 
@@ -265,7 +263,7 @@ static void offset_target(auto size, auto target_code, auto target) {
 }
 
 static RelocationResult do_far_relocations(
-    std::span<uint8_t> target, const RelocationInfo &relocation_info,
+    std::span<uint8_t> target, const relocation_info &relocation_info,
     asmjit::CodeHolder &code, asmjit::x86::Assembler &assembler) {
   using namespace asmjit;
   using namespace asmjit::x86;
@@ -279,7 +277,7 @@ static RelocationResult do_far_relocations(
 
   uintptr_t relocation_offset = 0u;
   for (const auto &relocation : relocation_info.relocations) {
-    const auto &relo = std::get<x64::RelocationEntry>(relocation);
+    const auto &relo = std::get<x64::relocation_entry>(relocation);
     const auto &r_meta = get_relocator_for_instruction(relo.instruction);
     auto data_label = assembler.newLabel();
     relocation_data.emplace_back(data_label);
@@ -325,13 +323,13 @@ static void write_adjusted_target(auto size, auto target_code, auto target) {
 }
 
 static void write_relocation_data(
-    std::span<uint8_t> target, const RelocationInfo &relocation_info,
+    std::span<uint8_t> target, const relocation_info &relocation_info,
     std::vector<asmjit::Label> relocation_data,
     std::vector<std::pair<uintptr_t, uintptr_t>> relocation_offsets,
     asmjit::CodeHolder &code, asmjit::x86::Assembler &assembler) {
   size_t relocation_data_idx = 0;
   for (const auto &relocation : relocation_info.relocations) {
-    const auto &relo = std::get<x64::RelocationEntry>(relocation);
+    const auto &relo = std::get<x64::relocation_entry>(relocation);
     const auto &r_meta = get_relocator_for_instruction(relo.instruction);
     r_meta.gen_relo_data(target, relo, relocation_data[relocation_data_idx],
                          assembler, relocation_info);

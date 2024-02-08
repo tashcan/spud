@@ -73,9 +73,9 @@ endif()
 set(SPUD_PUBLIC_HDRS
     "include/spud/arch.h"
     "include/spud/detour.h"
-    "include/spud/pattern.h"
-    "include/spud/utils.h"
     "include/spud/details/function_traits.h"
+    "include/spud/utils.h"
+    "include/spud/signature.h"
     "include/spud/memory/protection.h"
 )
 

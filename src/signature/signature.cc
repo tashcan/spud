@@ -164,6 +164,10 @@ signature_matches find_in_module(std::string_view signature,
   const auto module_handle = reinterpret_cast<uintptr_t>(
       GetModuleHandleA(module.size() == 0 ? nullptr : module.data()));
   const auto dos_header = reinterpret_cast<PIMAGE_DOS_HEADER>(module_handle);
+  if (dos_header == nullptr) {
+    return {};
+  }
+
   if (dos_header->e_magic != IMAGE_DOS_SIGNATURE) {
     return {};
   }

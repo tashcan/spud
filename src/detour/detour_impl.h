@@ -11,15 +11,15 @@
 namespace spud {
 namespace detail {
 
-struct Trampoline {
+struct trampoline_buffer {
   uintptr_t start;
   std::vector<uint8_t> data;
 };
 
-using RelocationEntry = std::variant<x64::RelocationEntry>;
+using relocation_entry = std::variant<x64::relocation_entry>;
 
-struct RelocationInfo {
-  std::vector<RelocationEntry> relocations;
+struct relocation_info {
+  std::vector<relocation_entry> relocations;
 };
 
 } // namespace detail
