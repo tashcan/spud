@@ -10,13 +10,13 @@ permissions:
 
 jobs:
   benchmark:
-    name: Detour check 
+    name: Detour check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
-          submodules: 'recursive'
-    
+          submodules: "recursive"
+
       - name: Set reusable strings
         id: strings
         shell: bash
@@ -37,8 +37,8 @@ jobs:
 
       - name: Build
         run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config Release -j
-          
-      - name: Benchmark 
+
+      - name: Benchmark
         working-directory: ${{ steps.strings.outputs.build-output-dir }}
         run: ${{ steps.strings.outputs.build-output-dir }}/spud.benchmark | tee ${{ github.workspace }}/benchmark_result.txt
 
@@ -46,11 +46,10 @@ jobs:
         uses: tashcan/github-action-benchmark@tash
         with:
           name: Detour Benchmark
-          tool: 'catch2'
+          tool: "catch2"
           output-file-path: benchmark_result.txt
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
-          alert-threshold: '200%'
+          alert-threshold: "200%"
           comment-on-alert: true
           fail-on-alert: true
-

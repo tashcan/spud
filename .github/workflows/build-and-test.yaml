@@ -2,9 +2,9 @@ name: Build and test
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -48,32 +48,31 @@ jobs:
           - os: macos-14
             c_compiler: gcc
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: 'recursive'
+      - uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
 
-    - name: Set reusable strings
-      id: strings
-      shell: bash
-      run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-  
-    - uses: mjp41/workaround8649@c8550b715ccdc17f89c8d5c28d7a48eeff9c94a8
-      with:
-        os: ${{ matrix.os }}
-  
-    - name: Configure CMake
-      run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -S ${{ github.workspace }}
+      - name: Set reusable strings
+        id: strings
+        shell: bash
+        run: |
+          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
-    - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} -j
+      - uses: mjp41/workaround8649@c8550b715ccdc17f89c8d5c28d7a48eeff9c94a8
+        with:
+          os: ${{ matrix.os }}
 
-    - name: Test
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: ctest --build-config ${{ matrix.build_type }} --output-on-failure -R spud.test
+      - name: Configure CMake
+        run: >
+          cmake -B ${{ steps.strings.outputs.build-output-dir }}
+          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -S ${{ github.workspace }}
 
+      - name: Build
+        run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} -j
+
+      - name: Test
+        working-directory: ${{ steps.strings.outputs.build-output-dir }}
+        run: ctest --build-config ${{ matrix.build_type }} --output-on-failure -R spud.test
