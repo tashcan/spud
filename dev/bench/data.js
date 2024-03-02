@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706204630988,
+  "lastUpdate": 1709420463848,
   "repoUrl": "https://github.com/tashcan/spud",
   "entries": {
     "Detour Benchmark": [
@@ -516,6 +516,58 @@ window.BENCHMARK_DATA = {
             "name": "1GB search AVX2",
             "value": 56.8697,
             "range": "± 1.19166",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "committer": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "distinct": true,
+          "id": "3ef1030dac3d227de2cb8d76aa23b9ddbc1405f5",
+          "message": "Add install to CMakeLists.txt",
+          "timestamp": "2024-03-02T14:57:32-08:00",
+          "tree_id": "4666277d9599eb75868bbed14ef98921155e3141",
+          "url": "https://github.com/tashcan/spud/commit/3ef1030dac3d227de2cb8d76aa23b9ddbc1405f5"
+        },
+        "date": 1709420463447,
+        "tool": "catch2",
+        "benches": [
+          {
+            "name": "simple detour",
+            "value": 7.80975,
+            "range": "± 537.938",
+            "unit": "us",
+            "extra": "100 samples\n4 iterations"
+          },
+          {
+            "name": "1GB search",
+            "value": 1.00131,
+            "range": "± 7.99725",
+            "unit": "s",
+            "extra": "100 samples\n1 iterations"
+          },
+          {
+            "name": "1GB search SSE 4.2",
+            "value": 77.4276,
+            "range": "± 1.5321",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
+          },
+          {
+            "name": "1GB search AVX2",
+            "value": 54.6315,
+            "range": "± 736.626",
             "unit": "ms",
             "extra": "100 samples\n1 iterations"
           }
