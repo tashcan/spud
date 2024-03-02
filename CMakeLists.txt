@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.23 FATAL_ERROR)
 
 if (WIN32)
 project(spud C CXX ASM_MASM)
@@ -67,14 +67,16 @@ if(NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 endif()
 endif()
 
-target_sources("spud"
-    PUBLIC
+set(SPUD_PUBLIC_HDRS
     "include/spud/arch.h"
     "include/spud/detour.h"
+    "include/spud/pattern.h"
     "include/spud/utils.h"
+    "include/spud/details/function_traits.h"
     "include/spud/memory/protection.h"
 )
 
+target_sources("spud" PUBLIC FILE_SET public_headers TYPE HEADERS BASE_DIRS "include" FILES ${SPUD_PUBLIC_HDRS})
 target_include_directories("spud" PUBLIC "include" PRIVATE "src")
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch")
@@ -159,6 +161,16 @@ target_sources("spud"
     "${SPUD_SSE_SRCS}"
     "${SPUD_AVX2_SRCS}"
 )
+
+if (NOT SPUD_NO_INSTALL)
+    install(TARGETS ${PROJECT_NAME}
+            FILE_SET public_headers
+            RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+            ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+            LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+            INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+endif()
+
 
 if(SPUD_BUILD_TESTS)
 
