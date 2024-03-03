@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709420463848,
+  "lastUpdate": 1709434616350,
   "repoUrl": "https://github.com/tashcan/spud",
   "entries": {
     "Detour Benchmark": [
@@ -568,6 +568,58 @@ window.BENCHMARK_DATA = {
             "name": "1GB search AVX2",
             "value": 54.6315,
             "range": "± 736.626",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "committer": {
+            "email": "git@tashcan.com",
+            "name": "Tashcan",
+            "username": "tashcan"
+          },
+          "distinct": true,
+          "id": "3529e5e74103cbd8da0efd7d2b7dbb83a9bb64b3",
+          "message": "Add no LTO option",
+          "timestamp": "2024-03-02T18:52:56-08:00",
+          "tree_id": "3bbb43c3b0cf665de16692d652a2a499bd96e6c4",
+          "url": "https://github.com/tashcan/spud/commit/3529e5e74103cbd8da0efd7d2b7dbb83a9bb64b3"
+        },
+        "date": 1709434615798,
+        "tool": "catch2",
+        "benches": [
+          {
+            "name": "simple detour",
+            "value": 6.45065,
+            "range": "± 505.064",
+            "unit": "us",
+            "extra": "100 samples\n5 iterations"
+          },
+          {
+            "name": "1GB search",
+            "value": 1.00016,
+            "range": "± 2.40043",
+            "unit": "s",
+            "extra": "100 samples\n1 iterations"
+          },
+          {
+            "name": "1GB search SSE 4.2",
+            "value": 78.3383,
+            "range": "± 922.723",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
+          },
+          {
+            "name": "1GB search AVX2",
+            "value": 58.3946,
+            "range": "± 1.80378",
             "unit": "ms",
             "extra": "100 samples\n1 iterations"
           }
