@@ -22,6 +22,7 @@ else()
 set(__SPUD_IS_SELF OFF)
 endif()
 option(SPUD_BUILD_TESTS "" ${__SPUD_IS_SELF})
+option(SPUD_NO_LTO "" OFF)
 
 if (NOT TARGET Zydis)
 option(ZYDIS_BUILD_TOOLS "" OFF)
@@ -59,11 +60,13 @@ target_compile_options(spud PRIVATE
 )
 endif()
 
+if(NOT SPUD_NO_LTO)
 include(CheckIPOSupported)
 check_ipo_supported(RESULT lto_supported OUTPUT error)
 if(lto_supported)
 if(NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     set_property(TARGET spud PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
 endif()
 endif()
 
