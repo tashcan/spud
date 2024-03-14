@@ -259,9 +259,17 @@ auto create_detour(auto target,
 #endif
 
 // Creates a detour that will live until the end of the program
+#if __cpp_lib_source_location && SPUD_DETOUR_TRACING
 #define SPUD_STATIC_DETOUR(addr, fn)                                           \
-  (([=]() -> auto{                                                             \
+  (([=]() -> auto {                                                            \
     static auto dh_static_hook =                                               \
         SPUD_AUTO_HOOK(addr, fn, std::source_location::current());             \
     return dh_static_hook.install().trampoline();                              \
   })())
+#else
+#define SPUD_STATIC_DETOUR(addr, fn)                                           \
+  (([=]() -> auto {                                                            \
+    static auto dh_static_hook = SPUD_AUTO_HOOK(addr, fn);                     \
+    return dh_static_hook.install().trampoline();                              \
+  })())
+#endif
