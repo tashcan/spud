@@ -16,6 +16,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 set(ASMJIT_STATIC TRUE)
 
 option(SPUD_COMPARE_LIBS "" OFF)
+option(SPUD_DETOUR_TRACING "" OFF)
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 set(__SPUD_IS_SELF ON)
 else()
@@ -58,6 +59,10 @@ target_compile_options(spud PRIVATE
     "/permissive-"
     "/W4"
 )
+endif()
+
+if (SPUD_DETOUR_TRACING)
+target_compile_definitions(spud PUBLIC SPUD_DETOUR_TRACING=1)
 endif()
 
 if(NOT SPUD_NO_LTO)

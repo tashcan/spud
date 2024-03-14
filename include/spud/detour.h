@@ -105,8 +105,8 @@ private:
 
 template <typename T>
 concept Address = requires(T a) {
-  { a } -> std::convertible_to<std::uintptr_t>;
-} || std::is_pointer_v<T>;
+                    { a } -> std::convertible_to<std::uintptr_t>;
+                  } || std::is_pointer_v<T>;
 
 } // namespace detail
 
@@ -123,8 +123,16 @@ public:
   static inline R wrapper(Args... args) {
     const auto context = reinterpret_cast<ContextContainer *>(
         detail::detour::get_context_value());
-    return (reinterpret_cast<func_t *>(context->func))(
-        reinterpret_cast<trampoline_t *>(context->trampoline), args...);
+#if SPUD_DETOUR_TRACING
+    printf("%s\n", context->location.function_name());
+#endif
+    if constexpr (std::is_same_v<select_last<Args...>, ContextContainer *>)
+      return (reinterpret_cast<func_t *>(context->func))(
+          reinterpret_cast<trampoline_t *>(context->trampoline), args...,
+          context);
+    else
+      return (reinterpret_cast<func_t *>(context->func))(
+          reinterpret_cast<trampoline_t *>(context->trampoline), args...);
   };
 #if __cpp_lib_source_location && SPUD_DETOUR_TRACING
   template <detail::Address T, detail::Address F>
@@ -167,6 +175,15 @@ private:
       : detail::detour(address, func, wrapper) {}
 
 #endif
+
+  template <typename T> struct tag {
+    using type = T;
+  };
+
+  template <typename... Ts> struct select_last {
+    // Use a fold-expression to fold the comma operator over the parameter pack.
+    using type = typename decltype((tag<Ts>{}, ...))::type;
+  };
 };
 
 template <typename R, typename... Args>
@@ -174,9 +191,10 @@ struct detour<R (*)(R (*)(Args...), Args...)>
     : public detour<R(R (*)(Args...), Args...)> {};
 
 template <class F, class... Args>
-concept invocable = requires(F &&f, Args &&...args) {
-  std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
-};
+concept invocable =
+    requires(F &&f, Args &&...args) {
+      std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+    };
 
 namespace detail {
 #if __cpp_lib_source_location && SPUD_DETOUR_TRACING
@@ -194,6 +212,26 @@ template <typename F> inline auto create_detour_impl(auto target, F func) {
 #endif
 } // namespace detail
 
+#if __cpp_lib_source_location && SPUD_DETOUR_TRACING
+template <typename F,
+          typename std::enable_if_t<!std::is_function_v<F>> * = nullptr>
+auto create_detour(
+    auto target, F func,
+    const std::source_location location = std::source_location::current()) {
+  using FuncT = typename spud::detail::function_traits<F>::FuncType;
+  return detail::create_detour_impl<FuncT>(target, func, location);
+}
+
+template <typename F, typename std::enable_if_t<std::is_function_v<
+                          std::remove_pointer_t<F>>> * = nullptr>
+auto create_detour(
+    auto target, typename detail::function_traits_ptr<F>::FuncType func,
+    const std::source_location location = std::source_location::current()) {
+  return detail::create_detour_impl<
+      typename detail::function_traits_ptr<F>::FuncType>(target, func,
+                                                         location);
+}
+#else
 template <typename F,
           typename std::enable_if_t<!std::is_function_v<F>> * = nullptr>
 auto create_detour(auto target, F func) {
@@ -208,15 +246,22 @@ auto create_detour(auto target,
   return detail::create_detour_impl<
       typename detail::function_traits_ptr<F>::FuncType>(target, func);
 }
+#endif
 
 } // namespace spud
 
+#if __cpp_lib_source_location && SPUD_DETOUR_TRACING
+#define SPUD_AUTO_HOOK(target, func, loc)                                      \
+  spud::create_detour<decltype(&func<void (*)(...)>)>(target, func, loc);
+#else
 #define SPUD_AUTO_HOOK(target, func)                                           \
   spud::create_detour<decltype(&func<void (*)(...)>)>(target, func);
+#endif
 
 // Creates a detour that will live until the end of the program
 #define SPUD_STATIC_DETOUR(addr, fn)                                           \
-  (([=]() -> auto {                                                            \
-    static auto dh_static_hook = SPUD_AUTO_HOOK(addr, fn);                     \
+  (([=]() -> auto{                                                             \
+    static auto dh_static_hook =                                               \
+        SPUD_AUTO_HOOK(addr, fn, std::source_location::current());             \
     return dh_static_hook.install().trampoline();                              \
   })())

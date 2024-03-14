@@ -26,10 +26,10 @@ struct DetourImpl {
   std::vector<uint8_t> (*create_absolute_jump)(uintptr_t target,
                                                uintptr_t data);
   std::tuple<relocation_info, size_t> (*collect_relocations)(uintptr_t address,
-                                                            size_t jump_size);
-  trampoline_buffer (*create_trampoline)(uintptr_t return_address,
-                                  std::span<uint8_t> target,
-                                  const relocation_info &relocation_infos);
+                                                             size_t jump_size);
+  trampoline_buffer (*create_trampoline)(
+      uintptr_t return_address, std::span<uint8_t> target,
+      const relocation_info &relocation_infos);
   uintptr_t (*maybe_resolve_jump)(uintptr_t) = [](auto v) { return v; };
 };
 

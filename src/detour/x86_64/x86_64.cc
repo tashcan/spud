@@ -20,10 +20,8 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
-#include <functional>
 #include <span>
 #include <string>
-#include <variant>
 #include <vector>
 
 // Here shall be dragons, at some point
@@ -116,7 +114,7 @@ static inline bool DecodeInstruction(const ZydisDecoder *decoder,
 }
 
 std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
-                                                       size_t jump_size) {
+                                                        size_t jump_size) {
   //
   // Create a temp absolute jump
   // * For this we can use a rip+0 jump so we don't spoil a register
@@ -205,8 +203,8 @@ std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
 }
 
 trampoline_buffer create_trampoline(uintptr_t return_address,
-                             std::span<uint8_t> target,
-                             const relocation_info &relocations) {
+                                    std::span<uint8_t> target,
+                                    const relocation_info &relocations) {
   using namespace asmjit;
   using namespace asmjit::x86;
 
@@ -297,8 +295,9 @@ static RelocationResult do_far_relocations(
     copy_offset = relo.address + relo.instruction.length;
     relocation_offsets.emplace_back(std::pair{relo.address, relocation_offset});
     r_meta.gen_relo_code(target, relo, relocation_info, data_label, assembler);
-    relocation_offset += code.textSection()->bufferSize() - relo.address -
-                         relo.instruction.length;
+    const auto relocated_size = code.textSection()->bufferSize();
+    relocation_offset +=
+        relocated_size - relo.address - relo.instruction.length;
   }
 
   return {relocation_data, copy_offset, relocation_offsets};
