@@ -1,5 +1,7 @@
 #include "relocators.h"
 
+#include <spud/utils.h>
+
 #include "Zydis/DecoderTypes.h"
 #include "Zydis/SharedTypes.h"
 #include "asmjit/core/operand.h"
@@ -130,8 +132,9 @@ const static relocation_meta jump_relocator = {
             const auto inside_target =
                 jump_target >= target_start && jump_target <= target_end;
             if (!inside_target) {
-              auto [[maybe_unused]] label_error = assembler.bind(data_label);
+              auto label_error = assembler.bind(data_label);
               ASMJIT_ASSERT(label_error == kErrorOk);
+              SPUD_UNUSED(label_error);
               assembler.jmp(ptr(rip, 0));
               assembler.embed(&jump_target, sizeof(jump_target));
             }
@@ -141,7 +144,7 @@ const static relocation_meta jump_relocator = {
         },
     .gen_relo_code = [](std::span<uint8_t>, const relocation_entry &,
                         const relocation_info &, asmjit::Label,
-                        asmjit::x86::Assembler &assembler) {},
+                        asmjit::x86::Assembler &) {},
     .copy_instruction = true};
 
 const static relocation_meta lea_relocator = {
