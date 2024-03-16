@@ -14,6 +14,7 @@ SPUD_NO_INLINE static void test_function_shared_basic(int n) {
     condition_intact_for_hook_shared_basic = true;
     return;
   }
+  return;
 }
 
 SPUD_NO_INLINE static void hook_shared_basic(auto original, int n) {
@@ -22,10 +23,10 @@ SPUD_NO_INLINE static void hook_shared_basic(auto original, int n) {
 }
 
 // Make sure test_function is not inlined here...this happens on GCC
-static auto *test_function_shared_basic_ptr = &test_function_shared_basic;
+auto *test_function_shared_basic_ptr = &test_function_shared_basic;
 TEST_CASE("Simple Hook with a condition", "[detour:shared:basic]") {
   hook_ran_shared_basic = false;
-  auto t = SPUD_AUTO_HOOK(test_function_shared_basic, hook_shared_basic);
+  auto t = SPUD_AUTO_HOOK(test_function_shared_basic_ptr, hook_shared_basic);
   t.install();
   test_function_shared_basic_ptr(1);
   REQUIRE(hook_ran_shared_basic == true);

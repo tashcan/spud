@@ -223,8 +223,6 @@ trampoline_buffer create_trampoline(uintptr_t return_address,
                     target.size() - relocation_result.copy_offset);
     assembler.jmp(ptr(rip, 0));
     assembler.embed(&return_address, sizeof(return_address));
-    auto data_offset = assembler.code()->textSection()->bufferSize();
-    data_offset = data_offset;
     write_relocation_data(target, relocations, relocation_result.data_labels,
                           relocation_result.relocation_offsets, code,
                           assembler);
@@ -295,7 +293,7 @@ static RelocationResult do_far_relocations(
     copy_offset = relo.address + relo.instruction.length;
     relocation_offsets.emplace_back(std::pair{relo.address, relocation_offset});
     r_meta.gen_relo_code(target, relo, relocation_info, data_label, assembler);
-    const auto relocated_size = code.textSection()->bufferSize();
+    const auto relocated_size = assembler.offset();
     relocation_offset +=
         relocated_size - relo.address - relo.instruction.length;
   }
@@ -361,9 +359,7 @@ static void write_relocation_data(
         }
         relocated_location += relo.address;
 
-        const auto inside_target =
-            jump_target >= target_start && jump_target <= target_end;
-        if (!inside_target) {
+        if (code.isLabelBound(relocation_data[relocation_data_idx])) {
           const auto label_jump_target =
               code.labelOffset(relocation_data[relocation_data_idx]);
           const auto new_target =
@@ -390,6 +386,8 @@ static void write_relocation_data(
           offset_target(data_size, target_code + relocated_location,
                         offset - preceeding_relo_offset);
         }
+      } else {
+        assert(false && "Failed to caluclate absolute jump target");
       }
     }
     ++relocation_data_idx;

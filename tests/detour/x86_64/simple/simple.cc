@@ -21,6 +21,12 @@ extern "C" bool ASM_NAME(msg4);
 extern "C" void ASM_FUNC(mov5, (int));
 extern "C" bool ASM_NAME(msg5);
 
+extern "C" void ASM_FUNC(jz1, (int));
+extern "C" bool ASM_NAME(msg6);
+
+extern "C" void ASM_FUNC(jz2, (int));
+extern "C" bool ASM_NAME(msg7);
+
 static bool hook_ran_simple_amd64 = false;
 
 SPUD_NO_INLINE static void hook_amd64(auto original, int n) {
@@ -95,4 +101,24 @@ TEST_CASE("Simple Hook lambda mov 4", "[detour:x64:simple]") {
   mov4(0);
   REQUIRE(hook_ran_simple_amd64 == true);
   REQUIRE(msg4 == true);
+}
+
+TEST_CASE("Hook early test, jz", "[detour:x64:simple]") {
+  hook_ran_simple_amd64 = false;
+  msg6 = false;
+  auto t = SPUD_AUTO_HOOK(jz1, hook_amd64);
+  t.install();
+  jz1(1);
+  REQUIRE(hook_ran_simple_amd64 == true);
+  REQUIRE(msg6 == true);
+}
+
+TEST_CASE("Hook early test, jz2", "[detour:x64:simple]") {
+  hook_ran_simple_amd64 = false;
+  msg7 = false;
+  auto t = SPUD_AUTO_HOOK(jz2, hook_amd64);
+  t.install();
+  jz2(1);
+  REQUIRE(hook_ran_simple_amd64 == true);
+  REQUIRE(msg7 == true);
 }

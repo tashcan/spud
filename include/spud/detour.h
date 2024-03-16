@@ -110,7 +110,7 @@ concept Address = requires(T a) {
 
 } // namespace detail
 
-template <typename T> class detour;
+template <typename T> struct detour;
 
 template <typename R, typename... Args>
 struct detour<R(R (*)(Args...), Args...)> : public detail::detour {
