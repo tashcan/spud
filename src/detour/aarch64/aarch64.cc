@@ -20,20 +20,18 @@ namespace spud {
 namespace detail {
 namespace arm64 {
 
-constexpr auto kAbsoluteJumpSize = 16;
-
 std::vector<uint8_t> create_absolute_jump(uintptr_t target_address,
                                           uintptr_t data) {
   using namespace asmjit;
   using namespace asmjit::a64;
 
   CodeHolder code;
-  // TODO(tashcan): Do we have to fill the other values here somehow?
   code.init(Environment{asmjit::Arch::kAArch64});
   Assembler assembler(&code);
 
   Label L1 = assembler.newLabel();
   assembler.ldr(x9, ptr(L1));
+  assembler.mov(x11, data);
   assembler.br(x9);
   assembler.bind(L1);
   assembler.embed(&target_address, sizeof(target_address));
@@ -55,7 +53,6 @@ std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
 trampoline_buffer create_trampoline(uintptr_t return_address,
                                     std::span<uint8_t> target,
                                     const relocation_info &relocation_infos) {
-  //
   using namespace asmjit;
   using namespace asmjit::a64;
 
@@ -66,11 +63,10 @@ trampoline_buffer create_trampoline(uintptr_t return_address,
   const auto target_start = reinterpret_cast<uintptr_t>(target.data());
   const auto trampoline_start = code.textSection()->buffer().size();
 
-  const auto is_far_relocate = true;
   assembler.embed(target.data(), target.size());
   Label L1 = assembler.newLabel();
-  assembler.ldr(x9, ptr(L1));
-  assembler.br(x9);
+  assembler.ldr(x17, ptr(L1));
+  assembler.br(x17);
   assembler.bind(L1);
   assembler.embed(&return_address, sizeof(return_address));
 
