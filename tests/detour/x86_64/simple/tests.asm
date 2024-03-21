@@ -15,6 +15,7 @@ msg6 byte 0
 msg7 byte 0
 
 .code
+_TEXT16 SEGMENT ALIGN(16) 'CODE'
 mov1 proc
   mov byte ptr [offset msg], 1
   cmp byte ptr [offset msg], 1
@@ -102,5 +103,17 @@ jz2_exit:
   ret
 jz2 endp
 
+call_target proc
+    mov rax, rcx
+    ret
+call_target endp
+
+call1 proc
+    mov rcx, rdx
+    call call_target
+    mov rax, rax
+    ret
+call1 endp
+_TEXT16 ENDS
 end
 

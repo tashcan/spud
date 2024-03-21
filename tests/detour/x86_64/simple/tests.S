@@ -1,5 +1,5 @@
 .intel_syntax noprefix
-
+test.S
 .data
 .global msg
 .global msg2
@@ -113,3 +113,38 @@ jz2_cond:
 jz2_exit:
   pop         rax
   ret
+
+call_target:
+    mov rax, rcx
+    ret
+
+.global call1
+.align 4
+call1:
+    mov rcx, rdx
+    call call_target
+    mov rax, rax
+    ret
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    ret
+   

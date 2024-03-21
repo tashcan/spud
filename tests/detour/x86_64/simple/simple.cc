@@ -27,11 +27,19 @@ extern "C" bool ASM_NAME(msg6);
 extern "C" void ASM_FUNC(jz2, (int));
 extern "C" bool ASM_NAME(msg7);
 
+extern "C" int ASM_FUNC(call1, (int, int));
+
 static bool hook_ran_simple_amd64 = false;
 
 SPUD_NO_INLINE static void hook_amd64(auto original, int n) {
   hook_ran_simple_amd64 = true;
   original(0);
+}
+
+SPUD_NO_INLINE static int hook_amd64_call_two_args(auto original, int n,
+                                                   int m) {
+  hook_ran_simple_amd64 = true;
+  return original(n, m);
 }
 
 static void hook_mov1(auto original) {}
@@ -121,4 +129,13 @@ TEST_CASE("Hook early test, jz2", "[detour:x64:simple]") {
   jz2(1);
   REQUIRE(hook_ran_simple_amd64 == true);
   REQUIRE(msg7 == true);
+}
+
+TEST_CASE("Hook early call", "[detour:x64:simple]") {
+  hook_ran_simple_amd64 = false;
+  auto t = SPUD_AUTO_HOOK(call1, hook_amd64_call_two_args);
+  t.install();
+  auto result = call1(1, 7);
+  REQUIRE(result == 7);
+  REQUIRE(hook_ran_simple_amd64 == true);
 }
