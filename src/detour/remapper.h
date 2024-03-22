@@ -4,9 +4,9 @@
 #include <cstdint>
 
 namespace spud::detail {
-struct Remapper {
-  Remapper(uintptr_t address, size_t size);
-  ~Remapper();
+struct remapper {
+  remapper(uintptr_t address, size_t size);
+  ~remapper();
 
   operator uintptr_t() {
     return remap_;

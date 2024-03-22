@@ -1,6 +1,6 @@
 #pragma once
 
 namespace spud::detail {
-struct RelocationInfo;
-struct Trampoline;
+struct relocation_info;
+struct trampoline_buffer;
 } // namespace spud::detail

@@ -1,5 +1,7 @@
 #include "relocators.h"
 
+#include <spud/utils.h>
+
 #include "Zydis/DecoderTypes.h"
 #include "Zydis/SharedTypes.h"
 #include "asmjit/core/operand.h"
@@ -34,8 +36,8 @@ static void write_adjusted_target(auto size, auto target_code, auto target) {
   }
 }
 
-void write_absolute_address(auto target, auto &relo, auto data_label,
-                            Assembler &assembler, auto &) {
+static void write_absolute_address(auto target, auto &relo, auto data_label,
+                                   Assembler &assembler, auto &) {
   auto target_start = reinterpret_cast<uintptr_t>(target.data());
   ZyanU64 absolute_target = 0;
   for (auto i = 0; i < relo.instruction.operand_count; ++i) {
@@ -54,11 +56,11 @@ void write_absolute_address(auto target, auto &relo, auto data_label,
   }
 }
 
-const static RelocationMeta generic_relocator = {
+const static relocation_meta generic_relocator = {
     .size = sizeof(uintptr_t),
     .gen_relo_data = write_absolute_address,
-    .gen_relo_code = [](std::span<uint8_t>, const RelocationEntry &relo,
-                        const RelocationInfo &, asmjit::Label relocation_data,
+    .gen_relo_code = [](std::span<uint8_t>, const relocation_entry &relo,
+                        const relocation_info &, asmjit::Label relocation_data,
                         asmjit::x86::Assembler &assembler) {
       auto instruction = relo.instruction;
       auto operands = relo.operands;
@@ -72,27 +74,24 @@ const static RelocationMeta generic_relocator = {
           &instruction, operands.data(), instruction.operand_count_visible,
           &request);
       asmjit::x86::Gpq scratch_register = r11;
+      ZydisEncoderOperand *register_operand = nullptr;
       if (request.operands[0].type == ZYDIS_OPERAND_TYPE_MEMORY) {
         req_operand = &request.operands[0];
-        if (request.operands[1].type == ZYDIS_OPERAND_TYPE_REGISTER) {
-          if (request.operands[1].reg.value == ZYDIS_REGISTER_R11 ||
-              request.operands[1].reg.value == ZYDIS_REGISTER_R11B ||
-              request.operands[1].reg.value == ZYDIS_REGISTER_R11D ||
-              request.operands[1].reg.value == ZYDIS_REGISTER_R11W) {
-            scratch_register = r10;
-          }
-        }
+        register_operand = &request.operands[1];
       } else {
         req_operand = &request.operands[1];
-        if (request.operands[0].type == ZYDIS_OPERAND_TYPE_REGISTER) {
-          if (request.operands[0].reg.value == ZYDIS_REGISTER_R11 ||
-              request.operands[0].reg.value == ZYDIS_REGISTER_R11B ||
-              request.operands[0].reg.value == ZYDIS_REGISTER_R11D ||
-              request.operands[0].reg.value == ZYDIS_REGISTER_R11W) {
-            scratch_register = r10;
-          }
+        register_operand = &request.operands[0];
+      }
+
+      if (register_operand->type == ZYDIS_OPERAND_TYPE_REGISTER) {
+        if (register_operand->reg.value == ZYDIS_REGISTER_R11 ||
+            register_operand->reg.value == ZYDIS_REGISTER_R11B ||
+            register_operand->reg.value == ZYDIS_REGISTER_R11D ||
+            register_operand->reg.value == ZYDIS_REGISTER_R11W) {
+          scratch_register = r10;
         }
       }
+
       req_operand->type = ZYDIS_OPERAND_TYPE_MEMORY;
       req_operand->mem.base =
           scratch_register == r11 ? ZYDIS_REGISTER_R11 : ZYDIS_REGISTER_R10;
@@ -118,7 +117,7 @@ const static RelocationMeta generic_relocator = {
       }
     }};
 
-const static RelocationMeta jump_relocator = {
+const static relocation_meta jump_relocator = {
     .size = sizeof(uintptr_t),
     .gen_relo_data =
         [](auto target, auto &relo, auto data_label,
@@ -133,7 +132,9 @@ const static RelocationMeta jump_relocator = {
             const auto inside_target =
                 jump_target >= target_start && jump_target <= target_end;
             if (!inside_target) {
-              assembler.bind(data_label);
+              auto label_error = assembler.bind(data_label);
+              ASMJIT_ASSERT(label_error == kErrorOk);
+              SPUD_UNUSED(label_error);
               assembler.jmp(ptr(rip, 0));
               assembler.embed(&jump_target, sizeof(jump_target));
             }
@@ -141,24 +142,24 @@ const static RelocationMeta jump_relocator = {
             assert(false && "Failed to calculate absolute target jump address");
           }
         },
-    .gen_relo_code = [](std::span<uint8_t>, const RelocationEntry &,
-                        const RelocationInfo &, asmjit::Label,
+    .gen_relo_code = [](std::span<uint8_t>, const relocation_entry &,
+                        const relocation_info &, asmjit::Label,
                         asmjit::x86::Assembler &) {},
     .copy_instruction = true};
 
-const static RelocationMeta lea_relocator = {
+const static relocation_meta lea_relocator = {
     .size = sizeof(uintptr_t),
     .gen_relo_data = write_absolute_address,
     .gen_relo_code =
-        [](std::span<uint8_t>, const RelocationEntry &relo,
-           const RelocationInfo &, asmjit::Label relocation_data,
+        [](std::span<uint8_t>, const relocation_entry &relo,
+           const relocation_info &, asmjit::Label relocation_data,
            asmjit::x86::Assembler &assembler) {
           assembler.mov(zydis_reg_to_asmjit(relo.operands[0].reg.value),
                         qword_ptr(relocation_data));
         },
     .copy_instruction = false};
 
-const RelocationMeta &
+const relocation_meta &
 get_relocator_for_instruction(const ZydisDecodedInstruction &instruction) {
   if (instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE) {
     return jump_relocator;

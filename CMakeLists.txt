@@ -12,10 +12,11 @@ include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CXX_STANDARD_REQUIRED ON)
-# set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 set(ASMJIT_STATIC TRUE)
 
 option(SPUD_COMPARE_LIBS "" OFF)
+option(SPUD_DETOUR_TRACING "" OFF)
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 set(__SPUD_IS_SELF ON)
 else()
@@ -31,7 +32,7 @@ option(ZYDIS_BUILD_TOOLS "" OFF)
 FetchContent_Declare(
   zydis
   GIT_REPOSITORY https://github.com/zyantific/zydis.git
-  GIT_TAG        v4.0.0
+  GIT_TAG        v4.1.0
 )
 
 FetchContent_MakeAvailable(zydis)
@@ -41,7 +42,7 @@ if (NOT TARGET asmjit)
 FetchContent_Declare(
   asmjit
   GIT_REPOSITORY https://github.com/asmjit/asmjit.git
-  GIT_TAG        origin/master 
+  GIT_TAG        origin/master
 )
 
 FetchContent_MakeAvailable(asmjit)
@@ -60,6 +61,10 @@ target_compile_options(spud PRIVATE
 )
 endif()
 
+if (SPUD_DETOUR_TRACING)
+target_compile_definitions(spud PUBLIC SPUD_DETOUR_TRACING=1)
+endif()
+
 if(NOT SPUD_NO_LTO)
 include(CheckIPOSupported)
 check_ipo_supported(RESULT lto_supported OUTPUT error)
@@ -73,16 +78,16 @@ endif()
 set(SPUD_PUBLIC_HDRS
     "include/spud/arch.h"
     "include/spud/detour.h"
-    "include/spud/pattern.h"
-    "include/spud/utils.h"
     "include/spud/details/function_traits.h"
+    "include/spud/utils.h"
+    "include/spud/signature.h"
     "include/spud/memory/protection.h"
 )
 
 target_sources("spud" PUBLIC FILE_SET public_headers TYPE HEADERS BASE_DIRS "include" FILES ${SPUD_PUBLIC_HDRS})
 target_include_directories("spud" PUBLIC "include" PRIVATE "src")
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch" OR CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64")
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         set(ARCH "arm64")
     else()
@@ -123,7 +128,11 @@ if(CMAKE_OSX_ARCHITECTURES)
 endif()
 
 if (WIN32)
-    file(GLOB_RECURSE ASM_SRCS src/detour/x86_64/*.asm)
+    if (ARCH MATCHES "arm64")
+        file(GLOB_RECURSE ASM_SRCS src/detour/aarch64/*.asm)
+    else()
+        file(GLOB_RECURSE ASM_SRCS src/detour/x86_64/*.asm)
+    endif()
 else()
     if (ARCH MATCHES "arm64")
         file(GLOB_RECURSE ASM_SRCS src/detour/aarch64/*.S)
@@ -132,11 +141,18 @@ else()
     endif()
 endif(WIN32)
 
+if (ARCH MATCHES "arm64")
+file(GLOB_RECURSE SPUD_NEON_SRCS src/*_neon.cc)
+else()
 file(GLOB_RECURSE SPUD_SSE_SRCS src/*_sse.cc)
 file(GLOB_RECURSE SPUD_AVX2_SRCS src/*_avx2.cc)
+endif()
 
 if (MSVC)
     SET_SOURCE_FILES_PROPERTIES(${SPUD_AVX2_SRCS} PROPERTIES COMPILE_FLAGS "/arch:AVX2")
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+      SET_SOURCE_FILES_PROPERTIES(${SPUD_SSE_SRCS} PROPERTIES COMPILE_FLAGS "-msse4.2")
+endif()
 else()
     SET_SOURCE_FILES_PROPERTIES(${SPUD_AVX2_SRCS} PROPERTIES COMPILE_FLAGS "-mavx2 -mfma -msse4.2")
     SET_SOURCE_FILES_PROPERTIES(${SPUD_SSE_SRCS} PROPERTIES COMPILE_FLAGS "-msse4.2")
@@ -159,10 +175,11 @@ target_sources("spud"
     "src/detour/remapper.cc"
     "src/detour/remapper.h"
     "src/memory/protection.cc"
-    "src/pattern/pattern.cc"
+    "src/signature/signature.cc"
     "${ASM_SRCS}"
     "${SPUD_SSE_SRCS}"
     "${SPUD_AVX2_SRCS}"
+    "${SPUD_NEON_SRCS}"
 )
 
 if (NOT SPUD_NO_INSTALL)
@@ -177,17 +194,38 @@ endif()
 
 if(SPUD_BUILD_TESTS)
 
-if (WIN32)
-file(GLOB_RECURSE TEST_SRCS tests/x86_64/*.cc tests/x86_64/*.h tests/x86_64/*.asm)
-else()
+
+set(TEST_SRCS "tests/signature.cc")
+
+file(GLOB_RECURSE TEST_DETOUR_SHARED_SRCS tests/detour/shared/*.cc tests/detour/shared/*.h)
+list (APPEND TEST_SRCS ${TEST_DETOUR_SHARED_SRCS})
 
 if (ARCH MATCHES "arm64")
-file(GLOB_RECURSE TEST_SRCS tests/arm64/*.cc tests/arm64/*.h tests/arm64/*.S)
+file(GLOB_RECURSE TEST_DETOUR_SRCS tests/detour/aarch64/*.cc tests/detour/arm64/*.h)
 else()
-file(GLOB_RECURSE TEST_SRCS tests/x86_64/*.cc tests/x86_64/*.h tests/x86_64/*.S)
+file(GLOB_RECURSE TEST_DETOUR_SRCS tests/detour/x86_64/*.cc tests/detour/x86_64/*.h)
+endif()
+
+if (WIN32)
+
+if (ARCH MATCHES "arm64")
+file(GLOB_RECURSE TEST_ASM_SRCS tests/detour/arm64/*.asm)
+else()
+file(GLOB_RECURSE TEST_ASM_SRCS tests/detour/x86_64/*.asm)
+endif()
+
+else(WIN32)
+
+if (ARCH MATCHES "arm64")
+file(GLOB_RECURSE TEST_ASM_SRCS tests/detour/arm64/*.S)
+else()
+file(GLOB_RECURSE TEST_ASM_SRCS tests/detour/x86_64/*.S)
 endif()
 
 endif(WIN32)
+
+list (APPEND TEST_SRCS ${TEST_DETOUR_SRCS})
+list (APPEND TEST_SRCS ${TEST_ASM_SRCS})
 
 file(GLOB_RECURSE BENCHMARK_SRCS benchmark/*.cc)
 
@@ -230,7 +268,7 @@ FetchContent_MakeAvailable(PolyHook2)
 
 endif()
 
-add_executable("spud.test" ${TEST_SRCS} "tests/test_util.h" "tests/pattern.cc")
+add_executable("spud.test" ${TEST_SRCS} "tests/test_util.h" "tests/signature.cc")
 target_include_directories("spud.test" PRIVATE "tests")
 target_link_libraries("spud.test" PRIVATE "Catch2" "Catch2::Catch2WithMain" "spud")
 add_dependencies("spud.test" "Catch2" "spud")

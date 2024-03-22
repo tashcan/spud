@@ -67,11 +67,17 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(spud)
 ```
 
+## Documentation
+
+Feel free to browse through [tests](https://github.com/tashcan/spud/tree/main/tests) and [benchmark](https://github.com/tashcan/spud/tree/main/benchmark) if you just want to get a quick glance and some example code.
+
+Otherwise head over to https://spud.tashcan.com/ for a more in-depth documentation
+
 ## Missing features
 
-- No documentation (yet)
 - Easy way to patch VTables
-- A lot more stuff
+- Memory Manipulation facilities
+- Import Table Patching
 
 ## References
 
