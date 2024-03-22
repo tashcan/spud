@@ -35,6 +35,7 @@
 
 #if SPUD_OS_MAC
 #include <libproc.h>
+#include <mach-o/dyld.h>
 #include <mach/mach.h>
 #include <mach/mach_vm.h>
 #include <mach/vm_map.h>
@@ -224,23 +225,21 @@ signature_matches find_in_module(std::string_view signature,
   mach_port_t task = mach_task_self();
   mach_vm_address_t address = 0;
   mach_vm_size_t size = 0;
-  vm_region_submap_info_64 region_info;
-  mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
-  mach_port_t object_name;
+  struct vm_region_submap_info_64 region_info;
+  mach_msg_type_number_t info_count = VM_REGION_SUBMAP_INFO_COUNT_64;
+  natural_t depth = 0;
 
   kern_return_t kr;
-  while ((kr = mach_vm_region_recurse(task, &address, &size, &info_count,
+  while ((kr = mach_vm_region_recurse(task, &address, &size, &depth,
                                       (vm_region_recurse_info_t)&region_info,
-                                      &object_name)) == KERN_SUCCESS) {
+                                      &info_count)) == KERN_SUCCESS) {
     char region_path_sz[PROC_PIDPATHINFO_MAXSIZE];
     proc_regionfilename(pid, (uint64_t)address, region_path_sz,
                         sizeof(region_path_sz));
     std::string region_path = region_path_sz;
 
-    // Compare the path with the dylib path
-    syslog(LOG_ERR, "%s\n", region_path.c_str());
     if (region_path.ends_with(module_name)) {
-      if ((region_info.protection & VM_PROT_READ)) {
+      if ((region_info.protection & VM_PROT_EXECUTE)) {
         const auto start = reinterpret_cast<uint8_t *>(address);
         const auto end = start + size;
         const auto data = std::span(start, end);
@@ -256,6 +255,7 @@ signature_matches find_in_module(std::string_view signature,
 
   std::vector<detail::signature_result> results;
   for (auto &section : sections) {
+    printf("Searching %p %p\n", section.begin(), section.end());
     auto matches = detail::find_matches(mask, data, section, features);
     results.insert(results.end(), matches.begin(), matches.end());
   }
