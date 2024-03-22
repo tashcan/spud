@@ -413,7 +413,15 @@ std::vector<uint8_t> create_absolute_jump(uintptr_t target_address,
 
 uintptr_t maybe_resolve_jump(uintptr_t address) {
   const uint8_t *memory = reinterpret_cast<const uint8_t *>(address);
-  if (memory[0] != 0xE9) {
+  if (memory[0] != 0xE9 && memory[0] != 0x55) {
+    return address;
+  }
+
+  if (memory[0] == 0x55) {
+    if (memory[1] == 0x48 && memory[2] == 0x89 && memory[3] == 0xE5 &&
+        memory[4] == 0x5D) {
+      return maybe_resolve_jump(address + 5);
+    }
     return address;
   }
 

@@ -4,6 +4,11 @@
 
 #include "test.bin.h"
 
+TEST_CASE("Find in module", "[simple]") {
+  const auto signature = "40 53";
+  const auto result = spud::find_in_module(signature);
+}
+
 TEST_CASE("Search 2 byte signature", "[simple]") {
   const auto signature = "40 53";
   std::string mask;
@@ -44,6 +49,8 @@ TEST_CASE("Search 2 byte signature NEON", "[simple]") {
       mask, data, test_bin, spud::cpu_feature::FEATURE_NEON);
   REQUIRE(result.size() == 15);
 }
+#else
+#error Unsupported Architecture
 #endif
 
 TEST_CASE("Search signature with wildcard", "[simple]") {
@@ -86,4 +93,6 @@ TEST_CASE("Search signature with wildcard NEON", "[simple]") {
       mask, data, test_bin, spud::cpu_feature::FEATURE_NEON);
   REQUIRE(result.size() == 1996);
 }
+#else
+#error Unsupported Architecture
 #endif
