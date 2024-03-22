@@ -33,6 +33,15 @@
 #endif
 #endif
 
+#if SPUD_OS_MAC
+#include <libproc.h>
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
+#include <mach/vm_map.h>
+#include <syslog.h>
+#include <unistd.h>
+#endif
+
 namespace spud {
 namespace detail {
 void generate_mask_and_data(std::string_view signature, std::string &mask,
@@ -190,6 +199,55 @@ signature_matches find_in_module(std::string_view signature,
       auto data = std::span(start, end);
       sections.emplace_back(data);
     }
+  }
+
+  std::string mask;
+  std::string data;
+  detail::generate_mask_and_data(signature, mask, data);
+
+  std::vector<detail::signature_result> results;
+  for (auto &section : sections) {
+    auto matches = detail::find_matches(mask, data, section, features);
+    results.insert(results.end(), matches.begin(), matches.end());
+  }
+  return results;
+}
+#elif SPUD_OS_MAC
+signature_matches find_in_module(std::string_view signature,
+                                 std::string_view module, uint32_t features) {
+  std::vector<std::span<uint8_t>> sections;
+
+  pid_t pid = getpid();
+
+  std::string_view module_name = module.size() > 0 ? module.data() : "";
+
+  mach_port_t task = mach_task_self();
+  mach_vm_address_t address = 0;
+  mach_vm_size_t size = 0;
+  vm_region_submap_info_64 region_info;
+  mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
+  mach_port_t object_name;
+
+  kern_return_t kr;
+  while ((kr = mach_vm_region_recurse(task, &address, &size, &info_count,
+                                      (vm_region_recurse_info_t)&region_info,
+                                      &object_name)) == KERN_SUCCESS) {
+    char region_path_sz[PROC_PIDPATHINFO_MAXSIZE];
+    proc_regionfilename(pid, (uint64_t)address, region_path_sz,
+                        sizeof(region_path_sz));
+    std::string region_path = region_path_sz;
+
+    // Compare the path with the dylib path
+    syslog(LOG_ERR, "%s\n", region_path.c_str());
+    if (region_path.ends_with(module_name)) {
+      if ((region_info.protection & VM_PROT_READ)) {
+        const auto start = reinterpret_cast<uint8_t *>(address);
+        const auto end = start + size;
+        const auto data = std::span(start, end);
+        sections.emplace_back(data);
+      }
+    }
+    address += size; // Move to the next region
   }
 
   std::string mask;

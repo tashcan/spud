@@ -4,6 +4,11 @@
 
 #include "test.bin.h"
 
+TEST_CASE("Find in module", "[simple]") {
+  const auto signature = "40 53";
+  const auto result = spud::find_in_module(signature);
+}
+
 TEST_CASE("Search 2 byte signature", "[simple]") {
   const auto signature = "40 53";
   std::string mask;
