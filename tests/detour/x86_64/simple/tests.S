@@ -1,5 +1,5 @@
 .intel_syntax noprefix
-test.S
+
 .data
 .global msg
 .global msg2
