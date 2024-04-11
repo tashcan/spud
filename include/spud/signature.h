@@ -102,10 +102,9 @@ signature_matches find_matches(std::string_view signature,
                                std::span<uint8_t> search_buffer,
                                uint32_t features = cpu_feature::FEATURE_ALL);
 
-#if SPUD_OS_WIN || SPUD_OS_MAC
+
 signature_matches find_in_module(std::string_view signature,
                                  std::string_view module = {},
                                  uint32_t features = cpu_feature::FEATURE_ALL);
-#endif
 
 } // namespace spud

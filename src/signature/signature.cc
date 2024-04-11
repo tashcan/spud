@@ -5,7 +5,10 @@
 #include <bit>
 #include <bitset>
 #include <cstdlib>
+#include <cstring>
+#include <fstream>
 #include <span>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -255,9 +258,50 @@ signature_matches find_in_module(std::string_view signature,
 
   std::vector<detail::signature_result> results;
   for (auto &section : sections) {
-    printf("Searching %p %p\n", section.begin(), section.end());
     auto matches = detail::find_matches(mask, data, section, features);
     results.insert(results.end(), matches.begin(), matches.end());
+  }
+  return results;
+}
+#elif SPUD_OS_LINUX
+signature_matches find_in_module(std::string_view signature,
+                                 std::string_view module, uint32_t features) {
+  std::ifstream maps_file("/proc/self/maps");
+  if (!maps_file.is_open()) {
+    return {};
+  }
+
+  const std::string_view module_name = module.size() > 0 ? module.data() : "";
+
+  std::string mask;
+  std::string data;
+  detail::generate_mask_and_data(signature, mask, data);
+
+  std::string line;
+  std::vector<detail::signature_result> results;
+  while (std::getline(maps_file, line)) {
+    int name_start = 0, name_end = 0;
+    unsigned long addr_start, addr_end;
+    char perms_str[8];
+    ino_t _inode;
+    unsigned int _deviceMajor;
+    unsigned int _deviceMinor;
+    unsigned long _offset;
+    sscanf(line.c_str(), "%lx-%lx %7s %lx %u:%u %lu %n%*[^\n]%n", &addr_start,
+           &addr_end, perms_str, &_offset, &_deviceMajor, &_deviceMinor,
+           &_inode, &name_start, &name_end);
+    std::string map_name;
+    if (name_end > name_start) {
+      line[name_end] = '\0';
+      map_name.assign(&line[name_start]);
+    }
+    if (map_name.ends_with(module_name) && strchr(perms_str, 'r') &&
+        strchr(perms_str, 'x')) {
+      const auto section = std::span(reinterpret_cast<uint8_t *>(addr_start),
+                                     reinterpret_cast<uint8_t *>(addr_end));
+      auto matches = detail::find_matches(mask, data, section, features);
+      results.insert(results.end(), matches.begin(), matches.end());
+    }
   }
   return results;
 }
