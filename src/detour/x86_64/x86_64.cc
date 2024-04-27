@@ -1,7 +1,5 @@
 #include "x86_64.h"
-#include "Zycore/Status.h"
-#include "Zycore/Types.h"
-#include "Zydis/DecoderTypes.h"
+
 #include "detour/detour_impl.h"
 #include "relocators.h"
 
@@ -14,6 +12,9 @@
 
 #include <Zydis/Utils.h>
 #include <Zydis/Zydis.h>
+#include <Zycore/Status.h>
+#include <Zycore/Types.h>
+#include <Zydis/DecoderTypes.h>
 
 #include <asmjit/asmjit.h>
 
@@ -88,16 +89,14 @@ needs_relocate(uintptr_t decoder_offset, uintptr_t code_end,
                                  result < kRuntimeAddress));
       const auto need_relocate = (reaches_into || reaches_outof);
 
-      if (need_relocate) {
-        return true;
-      }
+      return need_relocate;
     }
   }
 
   return false;
 };
 
-static inline bool DecodeInstruction(const ZydisDecoder *decoder,
+static inline bool decode_instruction(const ZydisDecoder *decoder,
                                      const void *buffer, ZyanUSize length,
                                      ZydisDecodedInstruction *instruction,
                                      ZydisDecodedOperand *operands) {
@@ -147,7 +146,7 @@ std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
 
   ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
   while (decode_length >= 0 &&
-         DecodeInstruction(
+         decode_instruction(
              &decoder, reinterpret_cast<void *>(address + decoder_offset),
              decode_length - decoder_offset, &instruction, operands)) {
 

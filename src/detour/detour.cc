@@ -41,10 +41,13 @@ const static std::array<DetourImpl, Arch::kCount> kDetourImpls = {
                .maybe_resolve_jump = x64::maybe_resolve_jump},
     // x86
     DetourImpl{.create_absolute_jump = x64::create_absolute_jump},
+#if SPUD_AARCH64_SUPPORT
     // Arm64
     DetourImpl{.create_absolute_jump = arm64::create_absolute_jump,
                .collect_relocations = arm64::collect_relocations,
-               .create_trampoline = arm64::create_trampoline},
+               .create_trampoline = arm64::create_trampoline,
+               .maybe_resolve_jump = arm64::maybe_resolve_jump},
+#endif
 };
 
 detail::detour &detour::install(Arch arch) {
@@ -117,6 +120,7 @@ detail::detour &detour::install(Arch arch) {
   }
 
   enable_jit_write_protection();
+
   return *this;
 }
 
