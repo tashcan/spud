@@ -32,6 +32,16 @@ void *alloc_executable_memory(size_t size) {
 #endif
 }
 
+void free_executable_memory(void *ptr, size_t size) {
+#ifdef SPUD_OS_WIN
+  VirtualFree(ptr, size, MEM_RELEASE);
+#elif SPUD_OS_APPLE
+  munmap(ptr, size);
+#elif SPUD_OS_LINUX
+  munmap(ptr, size);
+#endif
+}
+
 void disable_jit_write_protection() {
 #if SPUD_OS_APPLE
   pthread_jit_write_protect_np(0);

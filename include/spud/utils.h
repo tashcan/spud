@@ -13,6 +13,7 @@
 
 namespace spud {
 void *alloc_executable_memory(size_t size);
+void free_executable_memory(void *ptr, size_t size);
 
 // TODO(tashcan): Ideally this should be a scoped thing
 void disable_jit_write_protection();
