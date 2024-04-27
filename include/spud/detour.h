@@ -105,8 +105,8 @@ private:
 
 template <typename T>
 concept Address = requires(T a) {
-                    { a } -> std::convertible_to<std::uintptr_t>;
-                  } || std::is_pointer_v<T>;
+  { a } -> std::convertible_to<std::uintptr_t>;
+} || std::is_pointer_v<T>;
 
 } // namespace detail
 
@@ -191,10 +191,9 @@ struct detour<R (*)(R (*)(Args...), Args...)>
     : public detour<R(R (*)(Args...), Args...)> {};
 
 template <class F, class... Args>
-concept invocable =
-    requires(F &&f, Args &&...args) {
-      std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
-    };
+concept invocable = requires(F &&f, Args &&...args) {
+  std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+};
 
 namespace detail {
 #if __cpp_lib_source_location && SPUD_DETOUR_TRACING
