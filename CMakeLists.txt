@@ -38,6 +38,19 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(zydis)
 endif()
 
+if (NOT TARGET capstone)
+option(ZYDIS_BUILD_TOOLS "" OFF)
+option(ZYDIS_BUILD_EXAMPLES "" OFF)
+option(ZYDIS_BUILD_TOOLS "" OFF)
+FetchContent_Declare(
+  capstone
+  GIT_REPOSITORY https://github.com/capstone-engine/capstone.git
+  GIT_TAG        5.0.1
+)
+
+FetchContent_MakeAvailable(capstone)
+endif()
+
 if (NOT TARGET asmjit)
 FetchContent_Declare(
   asmjit
@@ -51,7 +64,8 @@ endif()
 add_library("spud" STATIC)
 target_link_libraries("spud" PRIVATE "Zydis")
 target_link_libraries("spud" PRIVATE "asmjit")
-add_dependencies("spud" "Zydis" "asmjit")
+target_link_libraries("spud" PRIVATE "capstone")
+add_dependencies("spud" "Zydis" "asmjit" "capstone")
 
 if (MSVC)
 target_compile_options(spud PRIVATE
