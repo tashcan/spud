@@ -39,9 +39,6 @@ FetchContent_MakeAvailable(zydis)
 endif()
 
 if (NOT TARGET capstone)
-option(ZYDIS_BUILD_TOOLS "" OFF)
-option(ZYDIS_BUILD_EXAMPLES "" OFF)
-option(ZYDIS_BUILD_TOOLS "" OFF)
 FetchContent_Declare(
   capstone
   GIT_REPOSITORY https://github.com/capstone-engine/capstone.git
