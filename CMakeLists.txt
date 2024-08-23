@@ -180,6 +180,8 @@ target_sources("spud"
     "src/detour/x86_64/relocators.h"
     "src/detour/aarch64/aarch64.cc"
     "src/detour/aarch64/aarch64.h"
+    "src/detour/aarch64/relocators.cc"
+    "src/detour/aarch64/relocators.h"
     "src/detour/detour.cc"
     "src/detour/detour_impl.h"
     "src/detour/fwd.h"
@@ -212,7 +214,7 @@ file(GLOB_RECURSE TEST_DETOUR_SHARED_SRCS tests/detour/shared/*.cc tests/detour/
 list (APPEND TEST_SRCS ${TEST_DETOUR_SHARED_SRCS})
 
 if (ARCH MATCHES "arm64")
-file(GLOB_RECURSE TEST_DETOUR_SRCS tests/detour/aarch64/*.cc tests/detour/arm64/*.h)
+file(GLOB_RECURSE TEST_DETOUR_SRCS tests/detour/arm64/*.cc tests/detour/arm64/*.h)
 else()
 file(GLOB_RECURSE TEST_DETOUR_SRCS tests/detour/x86_64/*.cc tests/detour/x86_64/*.h)
 endif()

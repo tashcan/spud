@@ -72,12 +72,17 @@ detail::detour &detour::install(Arch arch) {
       {reinterpret_cast<uint8_t *>(address_), required_trampoline_size},
       relocation_infos);
 
+  printf("trampoline size: %d\n", trampoline.data.size());
+  printf("required size %d\n", required_trampoline_size);
+
   // TODO(tashcan): This isn't particularly amazing, we might have to ajdust
   // permissions
   disable_jit_write_protection();
 
+  printf("trampoline start: %p\n", trampoline.start);
   auto trampoline_address = alloc_executable_memory(trampoline.data.size());
   assert(trampoline_address != nullptr);
+  printf("trampoline address: %p\n", trampoline_address);
 
   std::memcpy(trampoline_address, trampoline.data.data(),
               trampoline.data.size());
@@ -90,14 +95,19 @@ detail::detour &detour::install(Arch arch) {
   context_container_->location = location_;
 #endif
 
+  printf("Applying things\n");
   {
     const auto copy_size = required_trampoline_size;
+    printf("Resizing original %d\n", copy_size);
     original_func_data_.resize(copy_size);
+    printf("Copy original\n");
     std::memcpy(original_func_data_.data(), reinterpret_cast<void *>(address_),
                 copy_size);
 
+    printf("Remapping things\n");
     remapper remap(address_, copy_size);
     {
+      printf("Protection things\n");
       SPUD_SCOPED_PROTECTION(remap, copy_size,
                              mem_protection::READ_WRITE_EXECUTE);
 
@@ -105,6 +115,7 @@ detail::detour &detour::install(Arch arch) {
       // Which is okay for now
       // TODO(tashcan): Add some kind of NOP function to make the remaining
       // stuff "valid"
+      printf("Copying things\n");
       std::memcpy(reinterpret_cast<void *>(uintptr_t(remap)), jump.data(),
                   jump.size());
 #if SPUD_OS_APPLE
@@ -117,6 +128,8 @@ detail::detour &detour::install(Arch arch) {
   }
 
   enable_jit_write_protection();
+
+  printf("Exiting install\n");
   return *this;
 }
 

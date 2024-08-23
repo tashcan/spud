@@ -16,7 +16,7 @@ struct trampoline_buffer {
   std::vector<uint8_t> data;
 };
 
-using relocation_entry = std::variant<x64::relocation_entry>;
+using relocation_entry = std::variant<x64::relocation_entry, arm64::relocation_entry>;
 
 struct relocation_info {
   std::vector<relocation_entry> relocations;
