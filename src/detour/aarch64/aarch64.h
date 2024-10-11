@@ -13,7 +13,7 @@ namespace spud::detail::arm64 {
 struct relocation_entry {
     uintptr_t address;
     cs_insn instruction;
-    cs_arm64 detail;
+    cs_aarch64 detail;
 };
 
 std::vector<uint8_t> create_absolute_jump(uintptr_t target,

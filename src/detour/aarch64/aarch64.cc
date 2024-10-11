@@ -81,7 +81,7 @@ std::vector<uint8_t> create_absolute_jump(uintptr_t target_address,
 
 static bool needs_relocate(uintptr_t decoder_offset, uintptr_t code_end,
                            uintptr_t jump_size, const cs_insn &instruction,
-                           const cs_arm64 &detail) {
+                           const cs_aarch64 &detail) {
 
   auto has_group = [&](uint8_t group) {
     for (size_t i = 0; i < instruction.detail->groups_count; i++) {
@@ -176,7 +176,7 @@ std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
       vm_region_64(mach_task_self(), &addr, &vmsize, VM_REGION_BASIC_INFO_64,
                    (vm_region_info_t)&info, &info_count, &object);
 
-  cs_open(CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN, &handle);
+  cs_open(CS_ARCH_AARCH64, CS_MODE_LITTLE_ENDIAN, &handle);
   cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
   auto count = cs_disasm(
       handle, reinterpret_cast<const uint8_t *>(address),
@@ -204,7 +204,7 @@ std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
       continue;
     }
 
-    const auto &arm64 = detail->arm64;
+    const auto &arm64 = detail->aarch64;
     if (needs_relocate(decoder_offset, extend_trampoline_to, jump_size, insn[j],
                        arm64)) {
       const auto entry = relocation_entry{decoder_offset, insn[j], arm64};
@@ -300,7 +300,7 @@ static void write_relocation_data(
 
       uintptr_t jump_target = 0;
 
-      const auto &detail = relo.instruction.detail->arm64;
+      const auto &detail = relo.instruction.detail->aarch64;
       if (detail.op_count == 1) {
         jump_target = detail.operands[0].imm;
       } else if (detail.op_count == 2) {
