@@ -15,11 +15,15 @@ set(CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 set(ASMJIT_STATIC TRUE)
 
+option(SPUD_AARCH64_SUPPORT "" OFF)
+
+if (SPUD_AARCH64_SUPPORT)
 set(CAPSTONE_BUILD_STATIC ON)
 set(CAPSTONE_BUILD_STATIC_RUNTIME ON)
 set(CAPSTONE_BUILD_MACOS_THIN OFF)
 set(CAPSTONE_ARCHITECTURE_DEFAULT OFF)
 set(CAPSTONE_AARCH64_SUPPORT ON)
+endif()
 
 option(SPUD_COMPARE_LIBS "" OFF)
 option(SPUD_DETOUR_TRACING "" OFF)
@@ -44,6 +48,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(zydis)
 endif()
 
+if (SPUD_AARCH64_SUPPORT)
 if (NOT TARGET capstone)
 FetchContent_Declare(
   capstone
@@ -52,6 +57,7 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(capstone)
+endif()
 endif()
 
 if (NOT TARGET asmjit)
@@ -67,8 +73,11 @@ endif()
 add_library("spud" STATIC)
 target_link_libraries("spud" PRIVATE "Zydis")
 target_link_libraries("spud" PRIVATE "asmjit")
+if (SPUD_AARCH64_SUPPORT)
 target_link_libraries("spud" PRIVATE "capstone")
-add_dependencies("spud" "Zydis" "asmjit" "capstone")
+add_dependencies("spud" "capstone")
+endif()
+add_dependencies("spud" "Zydis" "asmjit")
 
 if (MSVC)
 target_compile_options(spud PRIVATE
@@ -80,6 +89,10 @@ endif()
 
 if (SPUD_DETOUR_TRACING)
 target_compile_definitions(spud PUBLIC SPUD_DETOUR_TRACING=1)
+endif()
+
+if (SPUD_AARCH64_SUPPORT)
+target_compile_definitions(spud PUBLIC SPUD_AARCH64_SUPPORT=1)
 endif()
 
 if(NOT SPUD_NO_LTO)
@@ -175,6 +188,17 @@ else()
     SET_SOURCE_FILES_PROPERTIES(${SPUD_SSE_SRCS} PROPERTIES COMPILE_FLAGS "-msse4.2")
 endif()
 
+set(SPUD_AARCH64_FILES "")
+
+if (SPUD_AARCH64_SUPPORT)
+list(APPEND SPUD_AARCH64_FILES
+    "src/detour/aarch64/aarch64.cc"
+    "src/detour/aarch64/aarch64.h"
+    "src/detour/aarch64/relocators.cc"
+    "src/detour/aarch64/relocators.h"
+)
+endif()
+
 target_sources("spud"
     PRIVATE
     "src/utils.cc"
@@ -184,10 +208,6 @@ target_sources("spud"
     "src/detour/x86_64/x86_64.h"
     "src/detour/x86_64/relocators.cc"
     "src/detour/x86_64/relocators.h"
-    "src/detour/aarch64/aarch64.cc"
-    "src/detour/aarch64/aarch64.h"
-    "src/detour/aarch64/relocators.cc"
-    "src/detour/aarch64/relocators.h"
     "src/detour/detour.cc"
     "src/detour/detour_impl.h"
     "src/detour/fwd.h"
@@ -195,6 +215,7 @@ target_sources("spud"
     "src/detour/remapper.h"
     "src/memory/protection.cc"
     "src/signature/signature.cc"
+    "${SPUD_AARCH64_FILES}"
     "${ASM_SRCS}"
     "${SPUD_SSE_SRCS}"
     "${SPUD_AVX2_SRCS}"
