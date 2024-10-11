@@ -1,3 +1,4 @@
+#include "capstone/arm64.h"
 #include "detour/detour_impl.h"
 #include "relocators.h"
 
@@ -15,11 +16,11 @@
 #include <mach/vm_map.h>
 #endif
 
+#include <algorithm>
 #include <cstdint>
 #include <span>
 #include <tuple>
 #include <vector>
-#include <algorithm>
 
 namespace spud {
 namespace detail {
@@ -37,40 +38,25 @@ static void write_relocation_data(
     std::vector<std::pair<uintptr_t, uintptr_t>> relocation_offsets,
     asmjit::CodeHolder &code, asmjit::a64::Assembler &assembler);
 
-static void write_adjusted_target(auto size, auto target_code, auto target) {
-  switch (size) {
-  case 8: {
-    assert(target < 0xFF && "immediate size too small for relocation");
-    *(int8_t *)(target_code) = target;
-  } break;
-  case 16: {
-    *(int16_t *)(target_code) = target;
-  } break;
-  case 32: {
-    *(int32_t *)(target_code) = target;
-  } break;
-  case 64: {
-    *(int64_t *)(target_code) = target;
-  } break;
-  }
+static inline constexpr uint32_t kFullMask =
+    std::numeric_limits<uint32_t>::max();
+static void write_adjusted_target(size_t offset_bits, size_t size_bits,
+                                  uint8_t *target_code, intptr_t target) {
+  constexpr auto kBitsPerUnsigned = 32; // Total bits in an unsigned integer
+  const uint8_t irrelevant_bits =
+      kBitsPerUnsigned - size_bits; // Bits that don't fit
+  const uint32_t current_integer_mask =
+      (kFullMask >> irrelevant_bits) << offset_bits; // Mask for current integer
+
+  uint32_t *current_integer =
+      reinterpret_cast<uint32_t *>(target_code); // Pointer to current integer
+  *current_integer = (*current_integer & ~current_integer_mask) |
+                     ((target << offset_bits) &
+                      current_integer_mask); // Update current integer
 }
 
 static void offset_target(auto size, auto target_code, auto target) {
-  switch (size) {
-  case 8: {
-    assert(target < 0xFF && "immediate size too small for relocation");
-    *(int8_t *)(target_code) += static_cast<int8_t>(target);
-  } break;
-  case 16: {
-    *(int16_t *)(target_code) += static_cast<int16_t>(target);
-  } break;
-  case 32: {
-    *(int32_t *)(target_code) += static_cast<int32_t>(target);
-  } break;
-  case 64: {
-    *(int64_t *)(target_code) += static_cast<int64_t>(target);
-  } break;
-  }
+  assert(false && "immediate size too small for relocation");
 }
 
 std::vector<uint8_t> create_absolute_jump(uintptr_t target_address,
@@ -97,7 +83,7 @@ static bool needs_relocate(uintptr_t decoder_offset, uintptr_t code_end,
                            uintptr_t jump_size, const cs_insn &instruction,
                            const cs_arm64 &detail) {
 
-  auto has_group = [&] (uint8_t group) {
+  auto has_group = [&](uint8_t group) {
     for (size_t i = 0; i < instruction.detail->groups_count; i++) {
       if (instruction.detail->groups[i] == group) {
         return true;
@@ -105,8 +91,9 @@ static bool needs_relocate(uintptr_t decoder_offset, uintptr_t code_end,
     }
     return false;
   };
-  if (instruction.id != ARM64_INS_ADRP && instruction.id != ARM64_INS_ADR
-      && !has_group(ARM64_GRP_BRANCH_RELATIVE) && !has_group(ARM64_GRP_JUMP) && !has_group(ARM64_GRP_CALL)) {
+  if (instruction.id != ARM64_INS_ADRP && instruction.id != ARM64_INS_ADR &&
+      !has_group(ARM64_GRP_BRANCH_RELATIVE) && !has_group(ARM64_GRP_JUMP) &&
+      !has_group(ARM64_GRP_CALL)) {
     return false;
   }
 
@@ -127,28 +114,29 @@ static bool needs_relocate(uintptr_t decoder_offset, uintptr_t code_end,
       result = target;
     }
   } else if (instruction.detail->groups_count > 0) {
-      auto has_group = [&] (uint8_t group) {
-        for (size_t i = 0; i < instruction.detail->groups_count; i++) {
-          if (instruction.detail->groups[i] == group) {
-            return true;
-          }
-        }
-        return false;
-      };
-      if (has_group(ARM64_GRP_BRANCH_RELATIVE) || has_group(ARM64_GRP_JUMP) || has_group(ARM64_GRP_CALL)) {
-        if (detail.op_count == 1) {
-          result = detail.operands[0].imm;
-        } else if (detail.op_count == 2) {
-          result = detail.operands[1].imm;
-        } else if (detail.op_count == 3) {
-          result = detail.operands[2].imm;
-        } else {
-            assert(false && "Unhandled branch relative operand count");
-        }
-        if (has_group(ARM64_GRP_BRANCH_RELATIVE)) {
-            result += instruction.address;
+    auto has_group = [&](uint8_t group) {
+      for (size_t i = 0; i < instruction.detail->groups_count; i++) {
+        if (instruction.detail->groups[i] == group) {
+          return true;
         }
       }
+      return false;
+    };
+    if (has_group(ARM64_GRP_BRANCH_RELATIVE) || has_group(ARM64_GRP_JUMP) ||
+        has_group(ARM64_GRP_CALL)) {
+      if (detail.op_count == 1) {
+        result = detail.operands[0].imm;
+      } else if (detail.op_count == 2) {
+        result = detail.operands[1].imm;
+      } else if (detail.op_count == 3) {
+        result = detail.operands[2].imm;
+      } else {
+        assert(false && "Unhandled branch relative operand count");
+      }
+      if (has_group(ARM64_GRP_BRANCH_RELATIVE)) {
+        result += instruction.address;
+      }
+    }
   }
 
   if (result == 0) {
@@ -190,8 +178,11 @@ std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
 
   cs_open(CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN, &handle);
   cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
-  auto count = cs_disasm(handle, reinterpret_cast<const uint8_t *>(address),
-                         std::max(std::min(uintptr_t(0xFF), (uintptr_t)vmsize - (address - addr)), uintptr_t(0xFFF)), address, 0, &insn);
+  auto count = cs_disasm(
+      handle, reinterpret_cast<const uint8_t *>(address),
+      std::max(std::min(uintptr_t(0xFF), (uintptr_t)vmsize - (address - addr)),
+               uintptr_t(0xFFF)),
+      address, 0, &insn);
 
   // Find the first branch instruction
   //
@@ -201,9 +192,8 @@ std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
 
   uintptr_t extend_trampoline_to = 0;
 
-  if (count <= 0)
-  {
-      return {relocation_info, 0};
+  if (count <= 0) {
+    return {relocation_info, 0};
   }
 
   for (size_t j = 0; j < count; j++) {
@@ -255,6 +245,7 @@ trampoline_buffer create_trampoline(uintptr_t return_address,
   auto relocation_result = do_relocations(target, relocations, code, assembler);
 
   Label L1 = assembler.newLabel();
+  printf("Writing jump back %p\n", assembler.code()->codeSize());
   assembler.ldr(x17, ptr(L1));
   assembler.br(x17);
   assembler.bind(L1);
@@ -278,20 +269,31 @@ static void write_relocation_data(
     r_meta.gen_relo_data(target, relo, relocation_data[relocation_data_idx],
                          assembler, relocation_info);
 
-    auto has_group = [&] (uint8_t group) {
-        for (size_t i = 0; i < relo.instruction.detail->groups_count; i++) {
+    auto has_group = [&](uint8_t group) {
+      for (size_t i = 0; i < relo.instruction.detail->groups_count; i++) {
         if (relo.instruction.detail->groups[i] == group) {
-            return true;
+          return true;
         }
-        }
-        return false;
+      }
+      return false;
     };
-    if (has_group(ARM64_GRP_BRANCH_RELATIVE) || has_group(ARM64_GRP_JUMP) || has_group(ARM64_GRP_CALL)) {
+    if (has_group(ARM64_GRP_BRANCH_RELATIVE) || has_group(ARM64_GRP_JUMP) ||
+        has_group(ARM64_GRP_CALL)) {
+
       auto *code_data = code.textSection()->data();
 
-      intptr_t data_offset = 0;
-      const size_t data_size = 32;
-      auto target_code = reinterpret_cast<uint8_t *>(code_data + data_offset);
+      intptr_t data_offset_bits = 0;
+      size_t data_size_bits = 0;
+      size_t data_divider = 1;
+      if (relo.instruction.id == ARM64_INS_BL) {
+        data_offset_bits = 0;
+        data_size_bits = 26;
+        data_divider = 4;
+      }
+
+      auto target_code = reinterpret_cast<uint8_t *>(code_data);
+      printf("Patching instruction %s %s at %p\n", relo.instruction.mnemonic,
+             relo.instruction.op_str, target_code);
 
       auto target_start = reinterpret_cast<uintptr_t>(target.data());
       auto target_end = target_start + target.size();
@@ -306,48 +308,55 @@ static void write_relocation_data(
       } else if (detail.op_count == 3) {
         jump_target = detail.operands[2].imm;
       } else {
-          assert(false && "Unhandled branch relative operand count");
+        assert(false && "Unhandled branch relative operand count");
+      }
+      if (jump_target == 0) {
+        continue;
       }
       if (has_group(ARM64_GRP_BRANCH_RELATIVE)) {
-          jump_target += relo.instruction.address;
+        jump_target += relo.instruction.address;
       }
 
-        uintptr_t relocated_location = 0u;
+      uintptr_t relocated_location = 0u;
+      for (auto &&[k, v] : relocation_offsets) {
+        printf("Adjusting offset to %p %p\n", v, relo.address);
+        relocated_location = v;
+        if (k >= relo.address)
+          break;
+      }
+      relocated_location += relo.address;
+
+      if (code.isLabelBound(relocation_data[relocation_data_idx])) {
+        const auto label_jump_target =
+            code.labelOffset(relocation_data[relocation_data_idx]);
+        const auto new_target = label_jump_target - relocated_location;
+        printf("Patching target jump label %p %p %p\n",
+               target_code + relocated_location, label_jump_target, new_target);
+        write_adjusted_target(data_offset_bits, data_size_bits,
+                              target_code + relocated_location,
+                              new_target / data_divider);
+      } else {
+        const auto target_offset_address = jump_target - target_start;
+
+        uintptr_t offset = 0u;
         for (auto &&[k, v] : relocation_offsets) {
-          relocated_location = v;
-          if (k >= relo.address)
+          offset = v;
+          if (k >= target_offset_address)
             break;
         }
-        relocated_location += relo.address;
 
-        if (code.isLabelBound(relocation_data[relocation_data_idx])) {
-          const auto label_jump_target =
-              code.labelOffset(relocation_data[relocation_data_idx]);
-          const auto new_target =
-              label_jump_target - relocated_location - relo.instruction.size;
-          write_adjusted_target(data_size, target_code + relocated_location,
-                                new_target);
-        } else {
-          const auto target_offset_address = jump_target - target_start;
-
-          uintptr_t offset = 0u;
-          for (auto &&[k, v] : relocation_offsets) {
-            offset = v;
-            if (k >= target_offset_address)
-              break;
-          }
-
-          uintptr_t preceeding_relo_offset = 0;
-          for (auto &&[k, v] : relocation_offsets) {
-            if (k >= target_offset_address)
-              break;
-            preceeding_relo_offset = v;
-          }
-
-          offset_target(data_size, target_code + relocated_location,
-                        offset - preceeding_relo_offset);
+        uintptr_t preceeding_relo_offset = 0;
+        for (auto &&[k, v] : relocation_offsets) {
+          if (k >= target_offset_address)
+            break;
+          preceeding_relo_offset = v;
         }
+
+        printf("Patching target %p\n", target_code + relocated_location);
+        offset_target(data_size_bits, target_code + relocated_location,
+                      offset - preceeding_relo_offset);
       }
+    }
     ++relocation_data_idx;
   }
 }

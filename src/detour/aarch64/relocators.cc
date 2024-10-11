@@ -13,24 +13,6 @@ namespace spud::detail::arm64 {
 using namespace asmjit;
 using namespace asmjit::a64;
 
-static void write_adjusted_target(auto size, auto target_code, auto target) {
-  switch (size) {
-  case 8: {
-    assert(target < 0xFF && "immediate size too small for relocation");
-    *(int8_t *)(target_code) = target;
-  } break;
-  case 16: {
-    *(int16_t *)(target_code) = target;
-  } break;
-  case 32: {
-    *(int32_t *)(target_code) = target;
-  } break;
-  case 64: {
-    *(int64_t *)(target_code) = target;
-  } break;
-  }
-}
-
 static void write_absolute_address(auto target, auto &relo, auto data_label,
                                    Assembler &assembler, auto &) {
   auto target_start = reinterpret_cast<uintptr_t>(target.data());
@@ -56,7 +38,7 @@ const static relocation_meta generic_relocator = {
       const auto &op = detail.operands[0];
 
       assembler.str(x20, Mem{sp, -16});
-      assembler.ldr(x20, Mem{relocation_data,0});
+      assembler.ldr(x20, Mem{relocation_data, 0});
 
       switch (op.reg) {
       case ARM64_REG_X0:
@@ -154,31 +136,65 @@ const static relocation_meta generic_relocator = {
 
 const static relocation_meta branch_relocator = {
     .size = sizeof(uintptr_t),
-    .gen_relo_data =  [](auto target, auto &relo, auto data_label,
-       Assembler &assembler, auto &) {
-           auto label_error = assembler.bind(data_label);
-           ASMJIT_ASSERT(label_error == kErrorOk);
-           SPUD_UNUSED(label_error);
-           assembler.bl(data_label);
-    },
+    .gen_relo_data =
+        [](auto target, auto &relo, auto data_label, Assembler &assembler,
+           auto &) {
+          auto label_error = assembler.bind(data_label);
+          ASMJIT_ASSERT(label_error == kErrorOk);
+          SPUD_UNUSED(label_error);
+          printf("Generating branch relocation\n");
+          auto has_group = [&](uint8_t group) {
+            for (size_t i = 0; i < relo.instruction.detail->groups_count; i++) {
+              if (relo.instruction.detail->groups[i] == group) {
+                return true;
+              }
+            }
+            return false;
+          };
+          auto &detail = relo.detail;
+          uintptr_t result = 0;
+          if (has_group(ARM64_GRP_BRANCH_RELATIVE) ||
+              has_group(ARM64_GRP_JUMP) || has_group(ARM64_GRP_CALL)) {
+            if (detail.op_count == 1) {
+              result = detail.operands[0].imm;
+            } else if (detail.op_count == 2) {
+              result = detail.operands[1].imm;
+            } else if (detail.op_count == 3) {
+              result = detail.operands[2].imm;
+            } else {
+              assert(false && "Unhandled branch relative operand count");
+            }
+            if (has_group(ARM64_GRP_BRANCH_RELATIVE)) {
+              result += relo.instruction.address;
+            }
+          }
+          if (result % 4 == 0) {
+            printf("Jumpng to %p\n", result);
+            assembler.bl((target.data() - result));
+          } else {
+            printf("Fallback jump, infinite loop");
+            assembler.bl(data_label);
+          }
+        },
     .gen_relo_code = [](std::span<uint8_t>, const relocation_entry &relo,
                         const relocation_info &, asmjit::Label relocation_data,
-                        Assembler &assembler) {
-     }};
+                        Assembler &assembler) {},
+    .copy_instruction = true};
 
 const relocation_meta &
 get_relocator_for_instruction(const cs_insn &instruction) {
-    auto has_group = [&] (uint8_t group) {
-        for (size_t i = 0; i < instruction.detail->groups_count; i++) {
-        if (instruction.detail->groups[i] == group) {
-            return true;
-        }
-        }
-        return false;
-    };
-    if (has_group(ARM64_GRP_BRANCH_RELATIVE) || has_group(ARM64_GRP_JUMP) || has_group(ARM64_GRP_CALL)) {
-        return branch_relocator;
+  auto has_group = [&](uint8_t group) {
+    for (size_t i = 0; i < instruction.detail->groups_count; i++) {
+      if (instruction.detail->groups[i] == group) {
+        return true;
+      }
     }
+    return false;
+  };
+  if (has_group(ARM64_GRP_BRANCH_RELATIVE) || has_group(ARM64_GRP_JUMP) ||
+      has_group(ARM64_GRP_CALL)) {
+    return branch_relocator;
+  }
   return generic_relocator;
 }
 

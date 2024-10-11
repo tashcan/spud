@@ -7,6 +7,7 @@ add_rules("mode.releasedbg")
 
 add_requires("zydis")
 add_requires("asmjit")
+add_requires("capstone")
 
 target("spud")
 do
@@ -18,4 +19,5 @@ do
 
     add_packages("zydis")
     add_packages("asmjit")
+    add_packages("capstone")
 end
