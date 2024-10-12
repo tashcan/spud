@@ -142,7 +142,6 @@ const static relocation_meta branch_relocator = {
           auto label_error = assembler.bind(data_label);
           ASMJIT_ASSERT(label_error == kErrorOk);
           SPUD_UNUSED(label_error);
-          printf("Generating branch relocation\n");
           auto has_group = [&](uint8_t group) {
             for (size_t i = 0; i < relo.instruction.detail->groups_count; i++) {
               if (relo.instruction.detail->groups[i] == group) {
@@ -169,10 +168,8 @@ const static relocation_meta branch_relocator = {
             }
           }
           if (result % 4 == 0) {
-            printf("Jumpng to %p\n", result);
             assembler.bl((target.data() - result));
           } else {
-            printf("Fallback jump, infinite loop");
             assembler.bl(data_label);
           }
         },

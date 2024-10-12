@@ -126,7 +126,6 @@ public:
 #if SPUD_DETOUR_TRACING
     printf("%s\n", context->location.function_name());
 #endif
-    printf("Calling wrapper %p\n", context);
     if constexpr (std::is_same_v<select_last<Args...>, ContextContainer *>)
       return (reinterpret_cast<func_t *>(context->func))(
           reinterpret_cast<trampoline_t *>(context->trampoline), args...,

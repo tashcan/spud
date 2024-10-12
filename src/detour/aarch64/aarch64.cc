@@ -211,11 +211,9 @@ std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
       relocation_info.relocations.emplace_back(entry);
       extend_trampoline_to =
           std::max(decoder_offset + insn[j].size, extend_trampoline_to);
-      printf("Relocating %s %s\n", insn[j].mnemonic, insn[j].op_str);
     } else if (extend_trampoline_to < jump_size) {
       extend_trampoline_to =
           std::max(decoder_offset + insn[j].size, extend_trampoline_to);
-      printf("Extending trampoline %s %s\n", insn[j].mnemonic, insn[j].op_str);
     }
   }
   cs_free(insn, count);
@@ -245,7 +243,6 @@ trampoline_buffer create_trampoline(uintptr_t return_address,
   auto relocation_result = do_relocations(target, relocations, code, assembler);
 
   Label L1 = assembler.newLabel();
-  printf("Writing jump back %p\n", assembler.code()->codeSize());
   assembler.ldr(x17, ptr(L1));
   assembler.br(x17);
   assembler.bind(L1);
@@ -292,8 +289,6 @@ static void write_relocation_data(
       }
 
       auto target_code = reinterpret_cast<uint8_t *>(code_data);
-      printf("Patching instruction %s %s at %p\n", relo.instruction.mnemonic,
-             relo.instruction.op_str, target_code);
 
       auto target_start = reinterpret_cast<uintptr_t>(target.data());
       auto target_end = target_start + target.size();
@@ -319,7 +314,6 @@ static void write_relocation_data(
 
       uintptr_t relocated_location = 0u;
       for (auto &&[k, v] : relocation_offsets) {
-        printf("Adjusting offset to %p %p\n", v, relo.address);
         relocated_location = v;
         if (k >= relo.address)
           break;
@@ -330,8 +324,6 @@ static void write_relocation_data(
         const auto label_jump_target =
             code.labelOffset(relocation_data[relocation_data_idx]);
         const auto new_target = label_jump_target - relocated_location;
-        printf("Patching target jump label %p %p %p\n",
-               target_code + relocated_location, label_jump_target, new_target);
         write_adjusted_target(data_offset_bits, data_size_bits,
                               target_code + relocated_location,
                               new_target / data_divider);
@@ -352,7 +344,6 @@ static void write_relocation_data(
           preceeding_relo_offset = v;
         }
 
-        printf("Patching target %p\n", target_code + relocated_location);
         offset_target(data_size_bits, target_code + relocated_location,
                       offset - preceeding_relo_offset);
       }

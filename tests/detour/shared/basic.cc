@@ -25,7 +25,6 @@ SPUD_NO_INLINE static void hook_shared_basic(auto original, int n) {
 // Make sure test_function is not inlined here...this happens on GCC
 auto *test_function_shared_basic_ptr = &test_function_shared_basic;
 TEST_CASE("Simple Hook with a condition", "[detour:shared:basic]") {
-    printf("Address OF %p\n", &condition_intact_for_hook_shared_basic);
   test_function_shared_basic_ptr(0);
   condition_intact_for_hook_shared_basic = false;
   hook_ran_shared_basic = false;
