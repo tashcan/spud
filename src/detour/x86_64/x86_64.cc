@@ -416,6 +416,11 @@ uintptr_t maybe_resolve_jump(uintptr_t address) {
     return address;
   }
 
+  // Resolve code that looks roughly like this
+  // 00 push    rbp
+  // 01 mov     rbp, rsp
+  // 05 pop     rbp
+  // 06 jmp     offset
   if (memory[0] == 0x55) {
     if (memory[1] == 0x48 && memory[2] == 0x89 && memory[3] == 0xE5 &&
         memory[4] == 0x5D) {
@@ -424,7 +429,7 @@ uintptr_t maybe_resolve_jump(uintptr_t address) {
     return address;
   }
 
-  uint32_t offset = 0;
+  int32_t offset = 0;
   std::memcpy(&offset, &memory[1], sizeof(offset));
   return address + offset + 5;
 }
