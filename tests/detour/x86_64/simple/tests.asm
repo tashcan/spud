@@ -4,13 +4,18 @@ PUBLIC msg2
 PUBLIC msg3
 PUBLIC msg4
 PUBLIC msg5
+PUBLIC msg6
+PUBLIC msg7
 msg  byte 0
 msg2 byte 0
 msg3 byte 0
 msg4 byte 0
 msg5 byte 0
+msg6 byte 0
+msg7 byte 0
 
 .code
+_TEXT16 SEGMENT ALIGN(16) 'CODE'
 mov1 proc
   mov byte ptr [offset msg], 1
   cmp byte ptr [offset msg], 1
@@ -69,5 +74,46 @@ mov5 proc
   ret
 mov5 endp
 
+jz1 proc
+  test    ecx, ecx
+  jz skip
+  ret
+skip:
+  mov byte ptr [offset msg6], 1
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  ret
+jz1 endp
+
+jz2 proc
+  push        rax
+  mov         dword ptr [rsp+4],ecx
+  cmp         dword ptr [rsp+4],0
+  jne         jz2_cond
+  mov         byte ptr [offset msg7],1
+  jmp         jz2_exit
+jz2_cond:
+  jmp         jz2_exit
+jz2_exit:
+  pop         rax
+  ret
+jz2 endp
+
+call_target proc
+    mov rax, rcx
+    ret
+call_target endp
+
+call1 proc
+    mov rcx, rdx
+    call call_target
+    mov rax, rax
+    ret
+call1 endp
+_TEXT16 ENDS
 end
 

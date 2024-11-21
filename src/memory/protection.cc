@@ -98,7 +98,7 @@ protection_scope::~protection_scope() {
 #if SPUD_OS_WIN
   DWORD old_protection = 0;
   VirtualProtect(reinterpret_cast<LPVOID>(address_), size_,
-                 original_protection_, &old_protection);
+                 static_cast<DWORD>(original_protection_), &old_protection);
 #elif SPUD_OS_APPLE
   auto err = mach_vm_protect(mach_task_self(), address_, size_, FALSE,
                              vm_prot_t(original_protection_));

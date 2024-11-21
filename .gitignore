@@ -5,3 +5,6 @@
 /.vscode/
 .DS_Store
 compile_commands.json
+/build-*/
+/vs/
+/.xmake/

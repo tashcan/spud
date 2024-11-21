@@ -28,7 +28,7 @@ private:
   uintptr_t address_ = 0;
   size_t size_ = 0;
 
-  uintptr_t extra = 0;
+  uintptr_t extra_ = 0;
 
   uintptr_t original_protection_;
 };

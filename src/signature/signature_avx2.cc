@@ -1,6 +1,6 @@
 
 #include <spud/arch.h>
-#include <spud/pattern.h>
+#include <spud/signature.h>
 
 #include <bit>
 #include <span>
@@ -17,31 +17,16 @@ namespace detail {
 
 void find_matches_avx2(std::string_view mask, std::string_view data,
                        size_t buffer_end, std::span<uint8_t> search_buffer,
-                       std::vector<PatternResult> &results) {
-  const auto does_match = [&](uintptr_t offset) {
-    for (size_t i = 0; i < mask.size(); ++i) {
-      if (mask[i] == '?')
-        continue;
-
-      // Make sure we don't walk past the end of the search buffer
-      if (search_buffer.size() < offset + i)
-        return false;
-
-      if (search_buffer[offset + i] != static_cast<uint8_t>(data[i]))
-        return false;
-    }
-    return true;
-  };
-
+                       std::vector<signature_result> &results) {
   __m256i first = _mm256_set1_epi8(0);
   __m256i second = _mm256_set1_epi8(0);
 
-  const auto pattern_size = std::min(mask.size(), size_t(32));
+  const auto signature_size = std::min(mask.size(), size_t(32));
 
   size_t spread = 0;
   size_t first_i = 0;
 
-  for (size_t i = 0; i < pattern_size; ++i) {
+  for (size_t i = 0; i < signature_size; ++i) {
     if (mask[i] != '?') {
       first = _mm256_set1_epi8(data[i]);
       first_i = i;
@@ -49,7 +34,7 @@ void find_matches_avx2(std::string_view mask, std::string_view data,
     }
   }
 
-  for (size_t i = pattern_size - 1; i >= 0; --i) {
+  for (size_t i = signature_size - 1; i >= 0; --i) {
     if (mask[i] != '?') {
       second = _mm256_set1_epi8(data[i]);
       spread = i - first_i;
@@ -74,8 +59,8 @@ void find_matches_avx2(std::string_view mask, std::string_view data,
 
     while (mm_mask != 0) {
       const auto bit_pos = std::countr_zero(mm_mask);
-      if (does_match(offset + bit_pos)) {
-        results.emplace_back(PatternResult{search_buffer, offset + bit_pos});
+      if (signature_does_match(offset + bit_pos, mask, data, search_buffer)) {
+        results.emplace_back(signature_result{search_buffer, offset + bit_pos});
       }
       mm_mask = mm_mask & (mm_mask - 1);
     }
@@ -83,8 +68,8 @@ void find_matches_avx2(std::string_view mask, std::string_view data,
 
   // Scan the remainder
   for (size_t offset = end; offset < buffer_end; ++offset) {
-    if (does_match(offset)) {
-      results.emplace_back(PatternResult{search_buffer, offset});
+    if (signature_does_match(offset, mask, data, search_buffer)) {
+      results.emplace_back(signature_result{search_buffer, offset});
     }
   }
 }
