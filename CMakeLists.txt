@@ -64,7 +64,7 @@ if (NOT TARGET asmjit)
 FetchContent_Declare(
   asmjit
   GIT_REPOSITORY https://github.com/asmjit/asmjit.git
-  GIT_TAG        e5d7c0bd5d9aec44d68830187138149e6a8c4e32
+  GIT_TAG        0b3aec39d18a98a87449f031a469b60aedae1a9b
 )
 
 FetchContent_MakeAvailable(asmjit)
