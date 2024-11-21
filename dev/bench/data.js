@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709434616350,
+  "lastUpdate": 1732168644670,
   "repoUrl": "https://github.com/tashcan/spud",
   "entries": {
     "Detour Benchmark": [
@@ -620,6 +620,51 @@ window.BENCHMARK_DATA = {
             "name": "1GB search AVX2",
             "value": 58.3946,
             "range": "± 1.80378",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@tashcan.com",
+            "name": "tashcan",
+            "username": "tashcan"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d286699ca6c29063db1eeedae7cacfc6dcb7871a",
+          "message": "Merge pull request #5 from tashcan/feature/docs",
+          "timestamp": "2024-11-20T21:55:28-08:00",
+          "tree_id": "22576d7c9629b006564d0ebeaaa25315c4cca2eb",
+          "url": "https://github.com/tashcan/spud/commit/d286699ca6c29063db1eeedae7cacfc6dcb7871a"
+        },
+        "date": 1732168644137,
+        "tool": "catch2",
+        "benches": [
+          {
+            "name": "simple detour",
+            "value": 7.2351,
+            "range": "± 386.384",
+            "unit": "us",
+            "extra": "100 samples\n5 iterations"
+          },
+          {
+            "name": "1GB search SSE 4.2",
+            "value": 77.246,
+            "range": "± 1.75197",
+            "unit": "ms",
+            "extra": "100 samples\n1 iterations"
+          },
+          {
+            "name": "1GB search AVX2",
+            "value": 52.5256,
+            "range": "± 580.422",
             "unit": "ms",
             "extra": "100 samples\n1 iterations"
           }
