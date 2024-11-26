@@ -18,10 +18,10 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <span>
 #include <tuple>
 #include <vector>
-#include <cstring>
 
 namespace spud {
 namespace detail {
@@ -145,7 +145,6 @@ std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
   relocation_info relocation_info;
 
 #if SPUD_OS_APPLE
-  // Fill
   csh handle;
   cs_insn *insn;
   vm_size_t vmsize = 0;
@@ -157,26 +156,27 @@ std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
   kern_return_t status =
       vm_region_64(mach_task_self(), &addr, &vmsize, VM_REGION_BASIC_INFO_64,
                    (vm_region_info_t)&info, &info_count, &object);
+#elif SPUD_OS_WIN
+  MEMORY_BASIC_INFORMATION memory_info;
+  VirtualQuery(address, &memory_info, sizeof(memory_info));
+  size_t vmsize = im.RegionSize;
+#else
+  size_t vmsize = 0xFF;
+#endif // SPUD_OS_APPLE
 
   cs_open(CS_ARCH_AARCH64, CS_MODE_LITTLE_ENDIAN, &handle);
   cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
   auto count = cs_disasm(
       handle, reinterpret_cast<const uint8_t *>(address),
       std::max(std::min(uintptr_t(0xFF), (uintptr_t)vmsize - (address - addr)),
-               uintptr_t(0xFFF)),
+               uintptr_t(jump_size * 4)),
       address, 0, &insn);
-
-  // Find the first branch instruction
-  //
-  // using captsone find all instructions that are rip relative and store the
-  // offset of the instruction in the relocation_info
-  //
-
-  uintptr_t extend_trampoline_to = 0;
 
   if (count <= 0) {
     return {relocation_info, 0};
   }
+
+  uintptr_t extend_trampoline_to = 0;
 
   std::vector<relocation_entry> relocations;
   relocations.reserve(10);
@@ -204,23 +204,19 @@ std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
 
   // Remove everything that doesn't actually end up needing relocations after we
   // have determined the total trampoline size
-  relocations.erase(
-      std::remove_if(begin(relocations), end(relocations),
-                     [&](auto &v) {
-                       return !(needs_relocate(v.address,
-                                               extend_trampoline_to - 1,
-                                               jump_size, v.instruction,
-                                               v.instruction.detail->aarch64));
-                     }),
-      end(relocations));
+  relocations.erase(std::remove_if(begin(relocations), end(relocations),
+                                   [&](auto &v) {
+                                     return !(needs_relocate(
+                                         v.address, extend_trampoline_to - 1,
+                                         jump_size, v.instruction,
+                                         v.instruction.detail->aarch64));
+                                   }),
+                    end(relocations));
 
   relocation_info.relocations = {relocations.begin(), relocations.end()};
 
   cs_free(insn, count);
   return {relocation_info, extend_trampoline_to};
-#else
-  return {relocation_info, jump_size};
-#endif
 }
 
 static RelocationResult do_relocations(std::span<uint8_t> target,
@@ -313,7 +309,7 @@ static void write_relocation_data(
       auto target_end = target_start + target.size();
 
       const auto &detail = relo.instruction.detail->aarch64;
-      const uintptr_t jump_target = detail.operands[detail.op_count -1].imm;
+      const uintptr_t jump_target = detail.operands[detail.op_count - 1].imm;
       if (jump_target == 0) {
         continue;
       }
@@ -401,19 +397,19 @@ static RelocationResult do_relocations(std::span<uint8_t> target,
   return {relocation_data, copy_offset, relocation_offsets};
 }
 
-uintptr_t maybe_resolve_jump(uintptr_t address)
-{
+uintptr_t maybe_resolve_jump(uintptr_t address) {
 #define IMM26_OFFSET(ins) ((int64_t)(int32_t)((ins) << 6) >> 4)
-    const uint8_t *memory = reinterpret_cast<const uint8_t *>(address);
-    const uint32_t opcode = (*reinterpret_cast<const uint32_t*>(memory) >> 26) & 0x3F;
-    if (opcode != 0b000101) {
-      return address;
-    }
+  const uint8_t *memory = reinterpret_cast<const uint8_t *>(address);
+  const uint32_t opcode =
+      (*reinterpret_cast<const uint32_t *>(memory) >> 26) & 0x3F;
+  if (opcode != 0b000101) {
+    return address;
+  }
 
-    uint32_t instruction = 0;
-    std::memcpy(&instruction, &memory[0], sizeof(instruction));
-    const auto target = address + IMM26_OFFSET(instruction);
-    return target;
+  uint32_t instruction = 0;
+  std::memcpy(&instruction, &memory[0], sizeof(instruction));
+  const auto target = address + IMM26_OFFSET(instruction);
+  return target;
 }
 
 } // namespace arm64

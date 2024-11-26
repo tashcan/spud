@@ -27,7 +27,7 @@ const static relocation_meta generic_relocator = {
             assembler.embed(&offset, sizeof(offset));
             assembler.embed(&offset, sizeof(offset));
           } else {
-            assert(false && "FUCK");
+            assert(false && "Expected IMM register");
           }
         },
     .gen_relo_code =
