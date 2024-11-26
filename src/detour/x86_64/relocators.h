@@ -7,8 +7,8 @@
 
 #include <asmjit/asmjit.h>
 
-#include <unordered_map>
 #include <span>
+#include <unordered_map>
 
 namespace spud::detail::x64 {
 

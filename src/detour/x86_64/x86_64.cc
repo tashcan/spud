@@ -10,11 +10,11 @@
 // Private helper stuff
 #include <zydis_utils.h>
 
-#include <Zydis/Utils.h>
-#include <Zydis/Zydis.h>
 #include <Zycore/Status.h>
 #include <Zycore/Types.h>
 #include <Zydis/DecoderTypes.h>
+#include <Zydis/Utils.h>
+#include <Zydis/Zydis.h>
 
 #include <asmjit/asmjit.h>
 
@@ -97,9 +97,9 @@ needs_relocate(uintptr_t decoder_offset, uintptr_t code_end,
 };
 
 static inline bool decode_instruction(const ZydisDecoder *decoder,
-                                     const void *buffer, ZyanUSize length,
-                                     ZydisDecodedInstruction *instruction,
-                                     ZydisDecodedOperand *operands) {
+                                      const void *buffer, ZyanUSize length,
+                                      ZydisDecodedInstruction *instruction,
+                                      ZydisDecodedOperand *operands) {
   ZydisDecoderContext ctx;
   if (ZYAN_FAILED(ZydisDecoderDecodeInstruction(decoder, &ctx, buffer, length,
                                                 instruction))) {
