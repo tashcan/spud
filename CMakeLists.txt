@@ -98,6 +98,8 @@ if(SPUD_AARCH64_SUPPORT)
     target_compile_definitions(spud PUBLIC SPUD_AARCH64_SUPPORT=1)
 endif()
 
+target_compile_definitions(spud PRIVATE NOMINMAX=1)
+
 if(NOT SPUD_NO_LTO)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT lto_supported OUTPUT error)

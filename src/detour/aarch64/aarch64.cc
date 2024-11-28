@@ -16,6 +16,10 @@
 #include <mach/vm_map.h>
 #endif
 
+#if SPUD_OS_WIN
+#include <Windows.h>
+#endif
+
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
@@ -143,10 +147,10 @@ std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
                                                         size_t jump_size) {
 
   relocation_info relocation_info;
-
-#if SPUD_OS_APPLE
   csh handle;
   cs_insn *insn;
+
+#if SPUD_OS_APPLE
   vm_size_t vmsize = 0;
   vm_address_t addr = (vm_address_t)address;
   vm_region_basic_info_data_64_t info;
@@ -158,10 +162,12 @@ std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
                    (vm_region_info_t)&info, &info_count, &object);
 #elif SPUD_OS_WIN
   MEMORY_BASIC_INFORMATION memory_info;
-  VirtualQuery(address, &memory_info, sizeof(memory_info));
-  size_t vmsize = im.RegionSize;
+  VirtualQuery(reinterpret_cast<LPCVOID>(address), &memory_info, sizeof(memory_info));
+  size_t vmsize = memory_info.RegionSize;
+  uintptr_t addr = reinterpret_cast<uintptr_t>(memory_info.BaseAddress);
 #else
   size_t vmsize = 0xFF;
+  uintptr_t addr =address;
 #endif // SPUD_OS_APPLE
 
   cs_open(CS_ARCH_AARCH64, CS_MODE_LITTLE_ENDIAN, &handle);
