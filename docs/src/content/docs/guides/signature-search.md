@@ -3,8 +3,6 @@ title: Search for a signature
 description: Introduction to signature search in memory.
 ---
 
-## Overview
-
 Often you'd want to search for a specific sequence of instructions to find a function to hook/patch. Oftentimes this also involves having wildcards as part of that search.
 For this spud has functions that enable fast search in a specific memory range
 utilizing the `spud::find_matches` facilities.
@@ -23,7 +21,7 @@ push    rdi
 push    r12
 push    r14
 push    r15
-lea     rbp, 
+lea     rbp,
 sub     rsp, 0D0h
 ```
 an appropriate signature would be something like this
