@@ -1,3 +1,11 @@
+#if __APPLE__
+#define MAC_PAGE @PAGE
+#define MAC_PAGEOFF @PAGEOFF
+#else
+#define MAC_PAGE
+#define MAC_PAGEOFF
+#endif
+
 .data
 .global msg
 .global msg2
@@ -21,14 +29,14 @@ msg7:  .byte 0
 .align 4
 .balign 128
 mov1:
-  adrp x9, msg@PAGE
+  adrp x9, msg MAC_PAGE
   mov w10, #0
   mov w11, #1
-  strb w11, [x9, msg@PAGEOFF]
-  ldrb w12, [x9, msg@PAGEOFF]
+  strb w11, [x9, msg MAC_PAGEOFF]
+  ldrb w12, [x9, msg MAC_PAGEOFF]
   cmp w12, w11
   b d
-  strb w10, [x9, msg@PAGEOFF]
+  strb w10, [x9, msg MAC_PAGEOFF]
  d:
   ret
 
@@ -40,9 +48,9 @@ mov2:
   ret
 
 mov2_zero:
-  adrp x9, msg2@PAGE
+  adrp x9, msg2 MAC_PAGE
   mov w11, #1
-  strb w11, [x9, msg2@PAGEOFF]
+  strb w11, [x9, msg2 MAC_PAGEOFF]
   mov x0, x9
   ret
 
@@ -54,9 +62,9 @@ mov3:
   ret
   nop
 mov3_zero:
-  adrp x9, msg3@PAGE
+  adrp x9, msg3 MAC_PAGE
   mov w11, #1
-  strb w11, [x9, msg3@PAGEOFF]
+  strb w11, [x9, msg3 MAC_PAGEOFF]
   mov x0, x9
   ret
 
@@ -65,41 +73,41 @@ mov3_zero:
 .align 4
 .balign 128
 mov4:
-  adrp x9, msg4@PAGE
+  adrp x9, msg4 MAC_PAGE
   mov w10, #0
-  strb w10, [x9, msg4@PAGEOFF]
+  strb w10, [x9, msg4 MAC_PAGEOFF]
   b mov4_zero
   mov w11, #1
-  strb w11, [x9, msg4@PAGEOFF]
-  strb w11, [x9, msg4@PAGEOFF]
-  strb w11, [x9, msg4@PAGEOFF]
-  strb w11, [x9, msg4@PAGEOFF]
-  strb w11, [x9, msg4@PAGEOFF]
-  strb w11, [x9, msg4@PAGEOFF]
+  strb w11, [x9, msg4 MAC_PAGEOFF]
+  strb w11, [x9, msg4 MAC_PAGEOFF]
+  strb w11, [x9, msg4 MAC_PAGEOFF]
+  strb w11, [x9, msg4 MAC_PAGEOFF]
+  strb w11, [x9, msg4 MAC_PAGEOFF]
+  strb w11, [x9, msg4 MAC_PAGEOFF]
   ret
 
 mov4_zero:
   mov w11, #1
-  strb w11, [x9, msg4@PAGEOFF]
+  strb w11, [x9, msg4 MAC_PAGEOFF]
   ret
 
 .global mov5
 .align 4
 .balign 128
 mov5:
-  adrp x9, msg5@PAGE
+  adrp x9, msg5 MAC_PAGE
   mov w10, #0
-  strb w10, [x9, msg5@PAGEOFF]
+  strb w10, [x9, msg5 MAC_PAGEOFF]
   b mov5_zero
   mov w11, #1
-  strb w11, [x9, msg5@PAGEOFF]
+  strb w11, [x9, msg5 MAC_PAGEOFF]
 
 mov5_zero:
   mov w11, #1
-  strb w11, [x9, msg5@PAGEOFF]
-  strb w11, [x9, msg5@PAGEOFF]
-  strb w11, [x9, msg5@PAGEOFF]
-  strb w11, [x9, msg5@PAGEOFF]
-  strb w11, [x9, msg5@PAGEOFF]
-  strb w11, [x9, msg5@PAGEOFF]
+  strb w11, [x9, msg5 MAC_PAGEOFF]
+  strb w11, [x9, msg5 MAC_PAGEOFF]
+  strb w11, [x9, msg5 MAC_PAGEOFF]
+  strb w11, [x9, msg5 MAC_PAGEOFF]
+  strb w11, [x9, msg5 MAC_PAGEOFF]
+  strb w11, [x9, msg5 MAC_PAGEOFF]
   ret

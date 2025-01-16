@@ -185,16 +185,13 @@ std::tuple<relocation_info, size_t> collect_relocations(uintptr_t address,
 
   // Remove everything that doesn't actually end up needing relocations after we
   // have determined the total trampoline size
-  relocations.erase(
-      std::remove_if(begin(relocations), end(relocations),
-                     [&](auto &v) {
-                       return !(is_jump(v.instruction) ||
-                                needs_relocate(v.address,
-                                               extend_trampoline_to - 1,
-                                               jump_size, v.instruction,
-                                               v.operands.data()));
-                     }),
-      end(relocations));
+  std::erase_if(relocations, [&](relocation_entry &v) {
+    return !(is_jump(v.instruction) ||
+             needs_relocate(v.address,
+                            extend_trampoline_to - 1,
+                            jump_size, v.instruction,
+                            v.operands.data()));
+  });
 
   relocation_info.relocations = {relocations.begin(), relocations.end()};
 

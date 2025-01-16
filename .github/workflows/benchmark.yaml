@@ -11,7 +11,7 @@ permissions:
 jobs:
   benchmark:
     name: Detour check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,10 +22,6 @@ jobs:
         shell: bash
         run: |
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-
-      - uses: mjp41/workaround8649@c8550b715ccdc17f89c8d5c28d7a48eeff9c94a8
-        with:
-          os: ubuntu-latest
 
       - name: Configure CMake
         run: >

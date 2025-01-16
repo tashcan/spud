@@ -14,8 +14,8 @@ namespace detail {
 void find_matches_neon(std::string_view mask, std::string_view data,
                        size_t buffer_end, std::span<uint8_t> search_buffer,
                        std::vector<signature_result> &results) {
-  int8x16_t first = vdupq_n_s8(0);
-  int8x16_t second = vdupq_n_s8(0);
+  uint8x16_t first = vdupq_n_u8(0);
+  uint8x16_t second = vdupq_n_u8(0);
 
   const auto signature_size = std::min(mask.size(), size_t(16));
 
@@ -24,7 +24,7 @@ void find_matches_neon(std::string_view mask, std::string_view data,
 
   for (size_t i = 0; i < signature_size; ++i) {
     if (mask[i] != '?') {
-      first = vdupq_n_s8(data[i]);
+      first = vdupq_n_u8(static_cast<uint8_t>(data[i]));
       first_i = i;
       break;
     }
@@ -32,7 +32,7 @@ void find_matches_neon(std::string_view mask, std::string_view data,
 
   for (size_t i = signature_size - 1; i >= 0; --i) {
     if (mask[i] != '?') {
-      second = vdupq_n_s8(data[i]);
+      second = vdupq_n_u8(static_cast<uint8_t>(data[i]));
       spread = i - first_i;
       break;
     }
@@ -41,19 +41,19 @@ void find_matches_neon(std::string_view mask, std::string_view data,
   const auto end = buffer_end - spread - ((buffer_end - spread) % 16);
 
   for (size_t offset = 0; offset < end; offset += 16) {
-    const auto first_block = vld1q_u8(search_buffer.data() + offset);
-    const auto second_block = vld1q_u8(search_buffer.data() + offset + spread);
+    const uint8x16_t first_block = vld1q_u8(search_buffer.data() + offset);
+    const uint8x16_t second_block = vld1q_u8(search_buffer.data() + offset + spread);
 
     const uint8x16_t eq_first = vceqq_u8(first, first_block);
     const uint8x16_t eq_second = vceqq_u8(second, second_block);
 
-    auto input = vandq_u8(eq_first, eq_second);
-    auto high_bits = vreinterpretq_u16_u8(vshrq_n_u8(input, 7));
-    uint32x4_t paired16 =
+    const uint8x16_t input = vandq_u8(eq_first, eq_second);
+    const uint16x8_t high_bits = vreinterpretq_u16_u8(vshrq_n_u8(input, 7));
+    const uint32x4_t paired16 =
         vreinterpretq_u32_u16(vsraq_n_u16(high_bits, high_bits, 7));
-    uint64x2_t paired32 =
+    const uint64x2_t paired32 =
         vreinterpretq_u64_u32(vsraq_n_u32(paired16, paired16, 14));
-    uint8x16_t paired64 =
+    const uint8x16_t paired64 =
         vreinterpretq_u8_u64(vsraq_n_u64(paired32, paired32, 28));
     uint32_t mm_mask =
         vgetq_lane_u8(paired64, 0) | ((int)vgetq_lane_u8(paired64, 8) << 8);
